@@ -145,6 +145,18 @@
   .board-cell.filled-7 { background: #0891b2 !important; }
   .board-cell.filled-8 { background: #be123c !important; }
 
+  .board-cell.filled-1:hover,
+  .board-cell.filled-2:hover,
+  .board-cell.filled-3:hover,
+  .board-cell.filled-4:hover,
+  .board-cell.filled-5:hover,
+  .board-cell.filled-6:hover,
+  .board-cell.filled-7:hover,
+  .board-cell.filled-8:hover {
+    opacity: 0.7;
+    cursor: pointer;
+  }
+
   .board-cell.preview {
     background: #93c5fd;
     opacity: 0.6;
@@ -204,7 +216,7 @@
   <div id="board"></div>
 </div>
 
-<div id="status">Click a cell to place the selected shape</div>
+<div id="status">Click a cell to place the L-shape (click filled cells to remove)</div>
 
 <script>
   const board = document.getElementById("board");
@@ -308,6 +320,17 @@
     checkWin();
   }
 
+  function removeShape(shapeId) {
+    for (let i = 0; i < boardState.length; i++) {
+      if (boardState[i] === shapeId) {
+        boardState[i] = 0;
+      }
+    }
+    renderBoard();
+    checkWin();
+    statusText.textContent = "Shape removed. Click a cell to place a new shape.";
+  }
+
   function clearPreview() {
     if (previewRow !== null && previewCol !== null) {
       const shape = getCurrentShape();
@@ -385,8 +408,11 @@
   }
 
   function handleCellClick(row, col) {
-    if (boardState[row * gridSize + col] !== 0) {
-      return; // Cell already filled
+    // If cell is filled, remove the shape
+    const shapeId = boardState[row * gridSize + col];
+    if (shapeId !== 0) {
+      removeShape(shapeId);
+      return;
     }
 
     const shape = getCurrentShape();
@@ -475,7 +501,7 @@
     currentRotation = 0;
     currentFlip = false;
     shapeIdCounter = 1;
-    statusText.textContent = "Click a cell to place the L-shape";
+    statusText.textContent = "Click a cell to place the L-shape (click filled cells to remove)";
     statusText.className = "";
     renderBoard();
     renderShapePreview();
