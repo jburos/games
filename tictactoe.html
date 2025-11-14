@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Tic Tac Toe</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 40px;
+  }
+
+  #board {
+    display: grid;
+    grid-gap: 5px;
+  }
+
+  .cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #eee;
+    cursor: pointer;
+  }
+
+  .cell.size-3 {
+    width: 100px;
+    height: 100px;
+    font-size: 2.5rem;
+  }
+
+  .cell.size-4 {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+  }
+
+  .cell.size-5 {
+    width: 65px;
+    height: 65px;
+    font-size: 1.6rem;
+  }
+
+  .cell.size-6 {
+    width: 55px;
+    height: 55px;
+    font-size: 1.3rem;
+  }
+
+  .cell.x {
+    color: #2563eb;
+    font-weight: bold;
+  }
+
+  .cell.o {
+    color: #dc2626;
+    font-weight: bold;
+  }
+
+  #status {
+    margin-top: 20px;
+    font-size: 1.4rem;
+  }
+
+  #status.player-x {
+    color: #2563eb;
+    font-weight: bold;
+  }
+
+  #status.player-o {
+    color: #dc2626;
+    font-weight: bold;
+  }
+
+  #controls {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  #gridSizeLabel {
+    font-size: 1rem;
+  }
+
+  #gridSizeSelect,
+  #winLengthSelect {
+    padding: 6px 12px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: 8px 16px;
+    font-size: 1rem;
+  }
+
+  #probabilityViz {
+    margin-top: 20px;
+    width: 100%;
+    max-width: 400px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  #probabilityViz h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    text-align: center;
+    color: #333;
+  }
+
+  .prob-bar-container {
+    margin-bottom: 12px;
+  }
+
+  .prob-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+  }
+
+  .prob-label-name {
+    font-weight: bold;
+  }
+
+  .prob-bar {
+    height: 25px;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+  }
+
+  .prob-bar-x {
+    background: #2563eb;
+  }
+
+  .prob-bar-o {
+    background: #dc2626;
+  }
+
+  .prob-bar-tie {
+    background: #6b7280;
+  }
+</style>
+</head>
+<body>
+
+<h1>Tic Tac Toe</h1>
+<div id="controls">
+  <label id="gridSizeLabel" for="gridSizeSelect">Grid Size:</label>
+  <select id="gridSizeSelect">
+    <option value="3">3x3</option>
+    <option value="4">4x4</option>
+    <option value="5">5x5</option>
+    <option value="6">6x6</option>
+  </select>
+  <label id="winLengthLabel" for="winLengthSelect">Win Length:</label>
+  <select id="winLengthSelect">
+    <option value="3">3 in a row</option>
+  </select>
+</div>
+<div id="board"></div>
+<div id="status"></div>
+<div id="probabilityViz">
+  <h3>Win Probability</h3>
+  <div class="prob-bar-container">
+    <div class="prob-label">
+      <span class="prob-label-name">Player X</span>
+      <span id="probX">0%</span>
+    </div>
+    <div class="prob-bar prob-bar-x" id="barX" style="width: 0%">0%</div>
+  </div>
+  <div class="prob-bar-container">
+    <div class="prob-label">
+      <span class="prob-label-name">Player O</span>
+      <span id="probO">0%</span>
+    </div>
+    <div class="prob-bar prob-bar-o" id="barO" style="width: 0%">0%</div>
+  </div>
+  <div class="prob-bar-container">
+    <div class="prob-label">
+      <span class="prob-label-name">Tie</span>
+      <span id="probTie">0%</span>
+    </div>
+    <div class="prob-bar prob-bar-tie" id="barTie" style="width: 0%">0%</div>
+  </div>
+</div>
+<button id="resetBtn">Reset</button>
+
+<script>
+  const board = document.getElementById("board");
+  const statusText = document.getElementById("status");
+  const resetBtn = document.getElementById("resetBtn");
+  const gridSizeSelect = document.getElementById("gridSizeSelect");
+  const winLengthSelect = document.getElementById("winLengthSelect");
+
+  let currentPlayer = "X";
+  let gameActive = true;
+  let gridSize = 3;
+  let winLength = 3;
+  let state = [];
+  let winningCombos = [];
+
+  function generateWinningCombos(size, length) {
+    const combos = [];
+    
+    // Generate all horizontal sequences (rows)
+    for (let row = 0; row < size; row++) {
+      for (let startCol = 0; startCol <= size - length; startCol++) {
+        const combo = [];
+        for (let i = 0; i < length; i++) {
+          combo.push(row * size + startCol + i);
+        }
+        combos.push(combo);
+      }
+    }
+    
+    // Generate all vertical sequences (columns)
+    for (let col = 0; col < size; col++) {
+      for (let startRow = 0; startRow <= size - length; startRow++) {
+        const combo = [];
+        for (let i = 0; i < length; i++) {
+          combo.push((startRow + i) * size + col);
+        }
+        combos.push(combo);
+      }
+    }
+    
+    // Generate all diagonal sequences (top-left to bottom-right)
+    for (let startRow = 0; startRow <= size - length; startRow++) {
+      for (let startCol = 0; startCol <= size - length; startCol++) {
+        const combo = [];
+        for (let i = 0; i < length; i++) {
+          combo.push((startRow + i) * size + (startCol + i));
+        }
+        combos.push(combo);
+      }
+    }
+    
+    // Generate all anti-diagonal sequences (top-right to bottom-left)
+    for (let startRow = 0; startRow <= size - length; startRow++) {
+      for (let startCol = length - 1; startCol < size; startCol++) {
+        const combo = [];
+        for (let i = 0; i < length; i++) {
+          combo.push((startRow + i) * size + (startCol - i));
+        }
+        combos.push(combo);
+      }
+    }
+    
+    return combos;
+  }
+
+  function checkWinner(boardState) {
+    const stateToCheck = boardState || state;
+    for (const combo of winningCombos) {
+      const first = stateToCheck[combo[0]];
+      if (first && combo.every(index => stateToCheck[index] === first)) {
+        return first;
+      }
+    }
+    return stateToCheck.every(v => v) ? "tie" : null;
+  }
+
+  function calculateWinProbabilities() {
+    if (!gameActive) {
+      // Game is over, show final result
+      const winner = checkWinner();
+      if (winner === "X") {
+        updateProbabilityViz(100, 0, 0);
+      } else if (winner === "O") {
+        updateProbabilityViz(0, 100, 0);
+      } else if (winner === "tie") {
+        updateProbabilityViz(0, 0, 100);
+      }
+      return;
+    }
+
+    // Adjust simulation count based on grid size and remaining moves
+    const emptyCells = state.filter(cell => cell === "").length;
+    let simulations = 500;
+    if (gridSize >= 5) {
+      simulations = 300; // Fewer simulations for larger grids
+    } else if (gridSize === 4) {
+      simulations = 400;
+    }
+    // Reduce simulations if there are many empty cells (early game)
+    if (emptyCells > gridSize * gridSize * 0.7) {
+      simulations = Math.floor(simulations * 0.7);
+    }
+
+    let xWins = 0;
+    let oWins = 0;
+    let ties = 0;
+
+    for (let i = 0; i < simulations; i++) {
+      const result = simulateRandomGame();
+      if (result === "X") xWins++;
+      else if (result === "O") oWins++;
+      else ties++;
+    }
+
+    const probX = (xWins / simulations) * 100;
+    const probO = (oWins / simulations) * 100;
+    const probTie = (ties / simulations) * 100;
+
+    updateProbabilityViz(probX, probO, probTie);
+  }
+
+  function simulateRandomGame() {
+    // Create a copy of the current state
+    const simState = [...state];
+    const emptyIndices = [];
+    for (let i = 0; i < simState.length; i++) {
+      if (simState[i] === "") {
+        emptyIndices.push(i);
+      }
+    }
+
+    // Shuffle empty indices for random play
+    const shuffled = [...emptyIndices].sort(() => Math.random() - 0.5);
+    let simPlayer = currentPlayer;
+
+    // Play out the rest of the game randomly
+    for (let i = 0; i < shuffled.length; i++) {
+      const index = shuffled[i];
+      simState[index] = simPlayer;
+      
+      const winner = checkWinner(simState);
+      if (winner) {
+        return winner;
+      }
+      
+      simPlayer = simPlayer === "X" ? "O" : "X";
+    }
+
+    return "tie";
+  }
+
+  function updateProbabilityViz(probX, probO, probTie) {
+    const barX = document.getElementById("barX");
+    const barO = document.getElementById("barO");
+    const barTie = document.getElementById("barTie");
+    const textX = document.getElementById("probX");
+    const textO = document.getElementById("probO");
+    const textTie = document.getElementById("probTie");
+
+    barX.style.width = `${probX}%`;
+    barO.style.width = `${probO}%`;
+    barTie.style.width = `${probTie}%`;
+
+    textX.textContent = `${probX.toFixed(1)}%`;
+    textO.textContent = `${probO.toFixed(1)}%`;
+    textTie.textContent = `${probTie.toFixed(1)}%`;
+
+    barX.textContent = probX > 5 ? `${probX.toFixed(1)}%` : "";
+    barO.textContent = probO > 5 ? `${probO.toFixed(1)}%` : "";
+    barTie.textContent = probTie > 5 ? `${probTie.toFixed(1)}%` : "";
+  }
+
+  function handleClick(e) {
+    const cell = e.target;
+    const index = parseInt(cell.dataset.index);
+
+    if (state[index] !== "" || !gameActive) {
+      return;
+    }
+
+    state[index] = currentPlayer;
+    cell.textContent = currentPlayer;
+    cell.classList.add(currentPlayer.toLowerCase());
+    
+    const winner = checkWinner();
+    if (winner) {
+      gameActive = false;
+      statusText.className = "";
+      if (winner === "tie") {
+        statusText.textContent = "It's a tie!";
+      } else {
+        statusText.textContent = `Player ${winner} wins!`;
+        statusText.classList.add(`player-${winner.toLowerCase()}`);
+      }
+    } else {
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      statusText.textContent = `Player ${currentPlayer}'s turn`;
+      statusText.className = `player-${currentPlayer.toLowerCase()}`;
+    }
+    
+    // Update win probabilities after each move
+    setTimeout(() => calculateWinProbabilities(), 10);
+  }
+
+  function renderBoard() {
+    board.innerHTML = "";
+    board.style.gridTemplateColumns = `repeat(${gridSize}, auto)`;
+    
+    const totalCells = gridSize * gridSize;
+    for (let i = 0; i < totalCells; i++) {
+      const cell = document.createElement("div");
+      cell.className = `cell size-${gridSize}`;
+      cell.dataset.index = i;
+      cell.textContent = state[i] || "";
+      if (state[i]) {
+        cell.classList.add(state[i].toLowerCase());
+      }
+      cell.addEventListener("click", handleClick);
+      board.appendChild(cell);
+    }
+  }
+
+  function updateWinLengthOptions() {
+    winLengthSelect.innerHTML = "";
+    const maxLength = Math.min(winLength, gridSize); // Ensure winLength doesn't exceed gridSize
+    for (let i = 3; i <= gridSize; i++) {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = `${i} in a row`;
+      option.selected = i === maxLength;
+      winLengthSelect.appendChild(option);
+    }
+    winLength = maxLength;
+  }
+
+  function resetGame() {
+    currentPlayer = "X";
+    gameActive = true;
+    state = Array(gridSize * gridSize).fill("");
+    winningCombos = generateWinningCombos(gridSize, winLength);
+    statusText.textContent = `Player ${currentPlayer}'s turn`;
+    statusText.className = `player-${currentPlayer.toLowerCase()}`;
+    renderBoard();
+    // Calculate initial probabilities
+    setTimeout(() => calculateWinProbabilities(), 10);
+  }
+
+  function changeGridSize() {
+    gridSize = parseInt(gridSizeSelect.value);
+    updateWinLengthOptions();
+    resetGame();
+  }
+
+  function changeWinLength() {
+    winLength = parseInt(winLengthSelect.value);
+    resetGame();
+  }
+
+  resetBtn.addEventListener("click", resetGame);
+  gridSizeSelect.addEventListener("change", changeGridSize);
+  winLengthSelect.addEventListener("change", changeWinLength);
+  
+  // Initialize the game
+  updateWinLengthOptions();
+  resetGame();
+</script>
+</body>
+</html>
