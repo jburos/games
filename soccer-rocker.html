@@ -607,21 +607,21 @@
     function checkGoals() {
       const ball = gameState.ball;
       
-      // Left goal (player scores)
+      // Left goal (opponent scores - opponent is on right, shoots at left goal)
       if (ball.x < GOAL_DEPTH && 
-          ball.y > (FIELD_HEIGHT - GOAL_WIDTH) / 2 && 
-          ball.y < (FIELD_HEIGHT + GOAL_WIDTH) / 2) {
-        gameState.playerScore++;
-        playerScoreEl.textContent = gameState.playerScore;
-        resetAfterGoal();
-      }
-      
-      // Right goal (opponent scores)
-      if (ball.x > FIELD_WIDTH - GOAL_DEPTH && 
           ball.y > (FIELD_HEIGHT - GOAL_WIDTH) / 2 && 
           ball.y < (FIELD_HEIGHT + GOAL_WIDTH) / 2) {
         gameState.opponentScore++;
         opponentScoreEl.textContent = gameState.opponentScore;
+        resetAfterGoal();
+      }
+      
+      // Right goal (player scores - player is on left, shoots at right goal)
+      if (ball.x > FIELD_WIDTH - GOAL_DEPTH && 
+          ball.y > (FIELD_HEIGHT - GOAL_WIDTH) / 2 && 
+          ball.y < (FIELD_HEIGHT + GOAL_WIDTH) / 2) {
+        gameState.playerScore++;
+        playerScoreEl.textContent = gameState.playerScore;
         resetAfterGoal();
       }
     }
@@ -854,11 +854,13 @@
       ctx.arc(FIELD_WIDTH / 2, FIELD_HEIGHT / 2, 50, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Goals
-      ctx.fillStyle = '#1a1a1a';
-      // Left goal
+      // Goals - colored by defending team
+      // Left goal (player defends - blue)
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.4)'; // Blue with transparency (player defends)
       ctx.fillRect(0, (FIELD_HEIGHT - GOAL_WIDTH) / 2, GOAL_DEPTH, GOAL_WIDTH);
-      // Right goal
+      
+      // Right goal (opponent defends - red)
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; // Red with transparency (opponent defends)
       ctx.fillRect(FIELD_WIDTH - GOAL_DEPTH, (FIELD_HEIGHT - GOAL_WIDTH) / 2, GOAL_DEPTH, GOAL_WIDTH);
 
       // Goal posts
