@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Free Kids Games - No Ads | Games Collection</title>
-<meta name="description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, and Tiling Puzzle. Safe, educational, and fun games for children." />
+<meta name="description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, and Soccer Rocker. Safe, educational, and fun games for children." />
 <meta name="keywords" content="kids games, free games, games without ads, educational games, tic tac toe, tetris, pong, puzzle games, children games, safe games, no ads games" />
 <meta name="author" content="Games Collection" />
 <meta name="robots" content="index, follow" />
@@ -14,14 +14,14 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://games.example.com/" />
 <meta property="og:title" content="Free Kids Games - No Ads | Games Collection" />
-<meta property="og:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, and Tiling Puzzle. Safe, educational, and fun games for children." />
+<meta property="og:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, and Soccer Rocker. Safe, educational, and fun games for children." />
 <meta property="og:site_name" content="Games Collection" />
 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:url" content="https://games.example.com/" />
 <meta property="twitter:title" content="Free Kids Games - No Ads | Games Collection" />
-<meta property="twitter:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, and Tiling Puzzle. Safe, educational, and fun games for children." />
+<meta property="twitter:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, and Soccer Rocker. Safe, educational, and fun games for children." />
 
 <script type="application/ld+json">
 {
@@ -71,6 +71,13 @@
       "name": "Pong Escape",
       "description": "Block the ball from falling into the pit and angle it to escape through the exit opening",
       "url": "https://games.example.com/pong-escape.html"
+    },
+    {
+      "@type": "Game",
+      "position": 5,
+      "name": "Soccer Rocker",
+      "description": "Top-down soccer game where you control your team. Pass, dribble, and shoot to score goals",
+      "url": "https://games.example.com/soccer-rocker.html"
     }
   ]
 }
@@ -198,6 +205,14 @@
     background: linear-gradient(135deg, #334155 0%, #475569 100%);
   }
 
+  .game-card.soccer-rocker {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  }
+
+  .game-card.soccer-rocker:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  }
+
   @media (max-width: 600px) {
     h1 {
       font-size: 2rem;
@@ -249,6 +264,14 @@
         <div class="game-title">Pong Escape</div>
         <div class="game-description">
           Block the ball from falling into the pit and angle it to escape through the exit opening.
+        </div>
+      </a>
+      
+      <a href="soccer-rocker.html" class="game-card soccer-rocker">
+        <div class="game-icon">⚽</div>
+        <div class="game-title">Soccer Rocker</div>
+        <div class="game-description">
+          Top-down soccer game! Control your team, pass to teammates, dribble past opponents, and shoot to score goals.
         </div>
       </a>
       
