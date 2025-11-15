@@ -154,6 +154,22 @@
   .prob-bar-tie {
     background: #6b7280;
   }
+
+  .cell-probability {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 0.6rem;
+    color: #666;
+    font-weight: normal;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  .cell {
+    position: relative;
+  }
 </style>
 </head>
 <body>
@@ -213,6 +229,8 @@
   let winLength = 3;
   let state = [];
   let winningCombos = [];
+  let showProbabilities = false;
+  let spacebarPressed = false;
 
   function generateWinningCombos(size, length) {
     const combos = [];
@@ -320,6 +338,138 @@
     updateProbabilityViz(probX, probO, probTie);
   }
 
+  function calculateCellProbability(cellIndex) {
+    if (state[cellIndex] !== "" || !gameActive) {
+      return null;
+    }
+
+    // Create a temporary state with the current player's move
+    const tempState = [...state];
+    tempState[cellIndex] = currentPlayer;
+
+    // Check if this move wins immediately
+    const immediateWinner = checkWinner(tempState);
+    if (immediateWinner === currentPlayer) {
+      return 100; // Guaranteed win
+    }
+    if (immediateWinner === "tie") {
+      return 0; // Guaranteed tie
+    }
+
+    // Simulate random games from this position
+    const emptyCells = tempState.filter(cell => cell === "").length;
+    let simulations = 200; // Fewer simulations per cell for performance
+    if (gridSize >= 5) {
+      simulations = 100;
+    } else if (gridSize === 4) {
+      simulations = 150;
+    }
+    if (emptyCells > gridSize * gridSize * 0.7) {
+      simulations = Math.floor(simulations * 0.7);
+    }
+
+    let wins = 0;
+    const nextPlayer = currentPlayer === "X" ? "O" : "X";
+
+    for (let i = 0; i < simulations; i++) {
+      const result = simulateRandomGameFromState(tempState, nextPlayer);
+      if (result === currentPlayer) {
+        wins++;
+      }
+    }
+
+    return Math.round((wins / simulations) * 100);
+  }
+
+  function simulateRandomGameFromState(startState, startPlayer) {
+    const simState = [...startState];
+    const emptyIndices = [];
+    for (let i = 0; i < simState.length; i++) {
+      if (simState[i] === "") {
+        emptyIndices.push(i);
+      }
+    }
+
+    const shuffled = [...emptyIndices].sort(() => Math.random() - 0.5);
+    let simPlayer = startPlayer;
+
+    for (let i = 0; i < shuffled.length; i++) {
+      const index = shuffled[i];
+      simState[index] = simPlayer;
+      
+      const winner = checkWinner(simState);
+      if (winner) {
+        return winner;
+      }
+      
+      simPlayer = simPlayer === "X" ? "O" : "X";
+    }
+
+    return "tie";
+  }
+
+  function updateCellProbabilities() {
+    if (!showProbabilities || !gameActive) {
+      // Remove all probability displays
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        const probElement = cell.querySelector('.cell-probability');
+        if (probElement) {
+          probElement.remove();
+        }
+      });
+      return;
+    }
+
+    const cells = document.querySelectorAll('.cell');
+    const emptyCells = [];
+    
+    // First pass: remove probabilities from filled cells and collect empty cells
+    cells.forEach(cell => {
+      const index = parseInt(cell.dataset.index);
+      if (state[index] === "") {
+        // Remove existing probability if any
+        const existingProb = cell.querySelector('.cell-probability');
+        if (existingProb) {
+          existingProb.remove();
+        }
+        emptyCells.push({ cell, index });
+      } else {
+        // Remove probability from filled cells
+        const probElement = cell.querySelector('.cell-probability');
+        if (probElement) {
+          probElement.remove();
+        }
+      }
+    });
+
+    // Calculate probabilities asynchronously to avoid blocking UI
+    let cellIndex = 0;
+    function calculateNextCell() {
+      if (cellIndex >= emptyCells.length) {
+        return;
+      }
+
+      const { cell, index } = emptyCells[cellIndex];
+      const prob = calculateCellProbability(index);
+      if (prob !== null) {
+        const probElement = document.createElement('div');
+        probElement.className = 'cell-probability';
+        probElement.textContent = `${prob}%`;
+        cell.appendChild(probElement);
+      }
+
+      cellIndex++;
+      // Use setTimeout to allow UI to update between calculations
+      setTimeout(calculateNextCell, 0);
+    }
+
+    // Start calculating probabilities
+    if (emptyCells.length > 0) {
+      calculateNextCell();
+    }
+  }
+
   function simulateRandomGame() {
     // Create a copy of the current state
     const simState = [...state];
@@ -400,7 +550,12 @@
     }
     
     // Update win probabilities after each move
-    setTimeout(() => calculateWinProbabilities(), 10);
+    setTimeout(() => {
+      calculateWinProbabilities();
+      if (showProbabilities) {
+        updateCellProbabilities();
+      }
+    }, 10);
   }
 
   function renderBoard() {
@@ -418,6 +573,11 @@
       }
       cell.addEventListener("click", handleClick);
       board.appendChild(cell);
+    }
+    
+    // Update cell probabilities if feature is enabled
+    if (showProbabilities) {
+      setTimeout(() => updateCellProbabilities(), 10);
     }
   }
 
@@ -460,6 +620,24 @@
   resetBtn.addEventListener("click", resetGame);
   gridSizeSelect.addEventListener("change", changeGridSize);
   winLengthSelect.addEventListener("change", changeWinLength);
+  
+  // Spacebar to toggle probability display (only once per press, not while held)
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT" && e.target.tagName !== "BUTTON") {
+      e.preventDefault();
+      if (!spacebarPressed) {
+        spacebarPressed = true;
+        showProbabilities = !showProbabilities;
+        updateCellProbabilities();
+      }
+    }
+  });
+
+  document.addEventListener("keyup", (e) => {
+    if (e.code === "Space") {
+      spacebarPressed = false;
+    }
+  });
   
   // Initialize the game
   updateWinLengthOptions();
