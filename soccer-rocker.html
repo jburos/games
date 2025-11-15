@@ -303,7 +303,9 @@
       opponentTeam: [],
       controlledPlayer: null,
       keys: {},
-      actionCooldown: 0
+      actionCooldown: 0,
+      opponentPressureTime: 0, // Track how long opponent has been under pressure
+      opponentLastPassTime: 0 // Track when opponent last passed
     };
 
     // Initialize teams
@@ -551,10 +553,83 @@
       // Update controlled player (in case ball moved)
       updateControlledPlayer();
 
-      // Simple AI for opponent team
+      // Opponent AI with better spacing and passing
+      let opponentWithBall = null;
+      let closestPlayerDistance = Infinity;
+      
+      // Find opponent with ball and check for pressure
+      gameState.opponentTeam.forEach(player => {
+        if (player.hasBall) {
+          opponentWithBall = player;
+          
+          // Check if player's team is close (pressure)
+          gameState.playerTeam.forEach(p => {
+            const dx = p.x - player.x;
+            const dy = p.y - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < closestPlayerDistance) {
+              closestPlayerDistance = dist;
+            }
+          });
+        }
+      });
+      
+      // Update pressure timer
+      if (opponentWithBall) {
+        if (closestPlayerDistance < 50) { // Player team within 50px
+          gameState.opponentPressureTime++;
+        } else {
+          gameState.opponentPressureTime = 0;
+        }
+        
+        // If under pressure for too long (60 frames = ~1 second), try to pass
+        if (gameState.opponentPressureTime > 60 && gameState.opponentLastPassTime > 60) {
+          // Find closest teammate
+          let closestTeammate = null;
+          let minDist = Infinity;
+          
+          gameState.opponentTeam.forEach(teammate => {
+            if (teammate === opponentWithBall) return;
+            const dx = teammate.x - opponentWithBall.x;
+            const dy = teammate.y - opponentWithBall.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < minDist && dist > 20) { // Don't pass to someone too close
+              minDist = dist;
+              closestTeammate = teammate;
+            }
+          });
+          
+          if (closestTeammate) {
+            // Pass to teammate
+            const dx = closestTeammate.x - gameState.ball.x;
+            const dy = closestTeammate.y - gameState.ball.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx);
+            
+            // Move ball away from passer
+            const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 5;
+            gameState.ball.x = opponentWithBall.x + Math.cos(angle) * pushDistance;
+            gameState.ball.y = opponentWithBall.y + Math.sin(angle) * pushDistance;
+            
+            gameState.ball.vx = Math.cos(angle) * PASS_POWER * 0.8;
+            gameState.ball.vy = Math.sin(angle) * PASS_POWER * 0.8;
+            opponentWithBall.hasBall = false;
+            gameState.opponentLastPassTime = 0;
+            gameState.opponentPressureTime = 0;
+          }
+        }
+      } else {
+        gameState.opponentPressureTime = 0;
+      }
+      
+      if (gameState.opponentLastPassTime < 1000) {
+        gameState.opponentLastPassTime++;
+      }
+      
+      // Update opponent positions with better spacing
       gameState.opponentTeam.forEach(player => {
         if (!player.hasBall) {
-          // Move towards ball, but avoid other players
+          // Move towards ball, but maintain better spacing
           const dx = gameState.ball.x - player.x;
           const dy = gameState.ball.y - player.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -567,20 +642,37 @@
             moveY = (dy / dist) * PLAYER_SPEED * 0.7;
           }
           
-          // Avoid other players
+          // Better spacing: avoid other players more aggressively
           const allOtherPlayers = [...gameState.playerTeam, ...gameState.opponentTeam.filter(p => p !== player)];
           allOtherPlayers.forEach(otherPlayer => {
             const dx2 = player.x - otherPlayer.x;
             const dy2 = player.y - otherPlayer.y;
             const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-            const minDist = PLAYER_RADIUS * 2 + 5;
+            const minDist = PLAYER_RADIUS * 2 + 15; // Increased minimum distance
             
             if (dist2 < minDist && dist2 > 0) {
-              // Push away from other player
+              // Push away from other player more strongly
               const angle = Math.atan2(dy2, dx2);
-              const pushStrength = (minDist - dist2) / minDist * 0.5;
+              const pushStrength = (minDist - dist2) / minDist * 1.5; // Stronger push
               moveX += Math.cos(angle) * pushStrength;
               moveY += Math.sin(angle) * pushStrength;
+            }
+          });
+          
+          // Special spacing for opponent teammates - maintain formation
+          gameState.opponentTeam.forEach(teammate => {
+            if (teammate === player) return;
+            const dx2 = player.x - teammate.x;
+            const dy2 = player.y - teammate.y;
+            const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+            const idealDist = PLAYER_RADIUS * 2 + 25; // Ideal distance between opponents
+            
+            if (dist2 < idealDist && dist2 > 0) {
+              // Spread out from teammates
+              const angle = Math.atan2(dy2, dx2);
+              const spreadStrength = (idealDist - dist2) / idealDist * 0.8;
+              moveX += Math.cos(angle) * spreadStrength;
+              moveY += Math.sin(angle) * spreadStrength;
             }
           });
           
@@ -590,6 +682,62 @@
           // Keep in bounds
           player.x = Math.max(PLAYER_RADIUS, Math.min(FIELD_WIDTH - PLAYER_RADIUS, player.x));
           player.y = Math.max(PLAYER_RADIUS, Math.min(FIELD_HEIGHT - PLAYER_RADIUS, player.y));
+        } else {
+          // Opponent with ball - move towards player's goal (left side)
+          const goalX = 0;
+          const goalY = FIELD_HEIGHT / 2;
+          const dx = goalX - player.x;
+          const dy = goalY - player.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          let moveX = 0;
+          let moveY = 0;
+          
+          if (dist > 0) {
+            moveX = (dx / dist) * PLAYER_SPEED * 0.6;
+            moveY = (dy / dist) * PLAYER_SPEED * 0.6;
+          }
+          
+          // Avoid player's team
+          gameState.playerTeam.forEach(p => {
+            const dx2 = player.x - p.x;
+            const dy2 = player.y - p.y;
+            const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+            const avoidDist = 40;
+            
+            if (dist2 < avoidDist && dist2 > 0) {
+              const angle = Math.atan2(dy2, dx2);
+              const avoidStrength = (avoidDist - dist2) / avoidDist * 1.2;
+              moveX += Math.cos(angle) * avoidStrength;
+              moveY += Math.sin(angle) * avoidStrength;
+            }
+          });
+          
+          player.x += moveX;
+          player.y += moveY;
+          
+          // Keep in bounds
+          player.x = Math.max(PLAYER_RADIUS, Math.min(FIELD_WIDTH - PLAYER_RADIUS, player.x));
+          player.y = Math.max(PLAYER_RADIUS, Math.min(FIELD_HEIGHT - PLAYER_RADIUS, player.y));
+          
+          // Move ball with player (dribble)
+          if (player.hasBall) {
+            const targetX = player.x + moveX * 8;
+            const targetY = player.y + moveY * 8;
+            const dx = targetX - gameState.ball.x;
+            const dy = targetY - gameState.ball.y;
+            gameState.ball.x += dx * 0.3;
+            gameState.ball.y += dy * 0.3;
+            
+            const distToPlayer = Math.sqrt((gameState.ball.x - player.x) ** 2 + (gameState.ball.y - player.y) ** 2);
+            if (distToPlayer > PLAYER_RADIUS + BALL_RADIUS + 5) {
+              const angle = Math.atan2(player.y - gameState.ball.y, player.x - gameState.ball.x);
+              gameState.ball.x = player.x - Math.cos(angle) * (PLAYER_RADIUS + BALL_RADIUS + 3);
+              gameState.ball.y = player.y - Math.sin(angle) * (PLAYER_RADIUS + BALL_RADIUS + 3);
+            }
+            gameState.ball.vx = 0;
+            gameState.ball.vy = 0;
+          }
         }
       });
 
