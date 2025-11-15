@@ -85,6 +85,12 @@
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     min-width: 150px;
+    cursor: grab;
+    user-select: none;
+  }
+
+  #shapePreview:active {
+    cursor: grabbing;
   }
 
   #shapePreview h3 {
@@ -92,6 +98,18 @@
     font-size: 1.1rem;
     color: #333;
     text-align: center;
+  }
+
+  #shapePreview.dragging {
+    opacity: 0.5;
+  }
+
+  .drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    opacity: 0.8;
+    transform: translate(-50%, -50%);
   }
 
   #shapePreviewGrid {
@@ -253,7 +271,7 @@
   <div id="board"></div>
 </div>
 
-<div id="status">Click a cell to place the L-shape (click filled cells to remove)</div>
+<div id="status">Click and drag the shape to place it, or click a cell to place the L-shape (click filled cells to remove)</div>
 
 <script>
   const board = document.getElementById("board");
@@ -341,6 +359,140 @@
         shapePreviewGrid.appendChild(cell);
       }
     }
+    
+    // Make preview draggable
+    setupDragAndDrop();
+  }
+  
+  function createDragGhost(shape) {
+    const ghost = document.createElement("div");
+    ghost.className = "drag-ghost";
+    const maxRow = Math.max(...shape.map(c => c[0]));
+    const maxCol = Math.max(...shape.map(c => c[1]));
+    
+    ghost.style.display = "grid";
+    ghost.style.gridTemplateColumns = `repeat(${maxCol + 1}, auto)`;
+    ghost.style.gap = "3px";
+    ghost.style.padding = "10px";
+    ghost.style.background = "rgba(37, 99, 235, 0.9)";
+    ghost.style.borderRadius = "8px";
+    ghost.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+    
+    for (let r = 0; r <= maxRow; r++) {
+      for (let c = 0; c <= maxCol; c++) {
+        const cell = document.createElement("div");
+        cell.style.width = "30px";
+        cell.style.height = "30px";
+        if (shape.some(([sr, sc]) => sr === r && sc === c)) {
+          cell.style.background = "#2563eb";
+          cell.style.borderRadius = "2px";
+        } else {
+          cell.style.background = "transparent";
+        }
+        ghost.appendChild(cell);
+      }
+    }
+    
+    return ghost;
+  }
+  
+  let dragGhost = null;
+  let isDragging = false;
+  let dragMouseMoveHandler = null;
+  let dragMouseUpHandler = null;
+  
+  function setupDragAndDrop() {
+    const shapePreview = document.getElementById("shapePreview");
+    if (!shapePreview) return;
+    
+    // Remove existing listeners if any
+    if (dragMouseMoveHandler) {
+      document.removeEventListener("mousemove", dragMouseMoveHandler);
+    }
+    if (dragMouseUpHandler) {
+      document.removeEventListener("mouseup", dragMouseUpHandler);
+    }
+    
+    // Use event delegation to avoid re-adding listeners
+    shapePreview.onmousedown = (e) => {
+      // Don't start drag if clicking on buttons or controls
+      if (e.target.tagName === 'BUTTON' || e.target.closest('#rotationControls')) {
+        return;
+      }
+      
+      e.preventDefault();
+      isDragging = true;
+      const shape = getCurrentShape();
+      dragGhost = createDragGhost(shape);
+      document.body.appendChild(dragGhost);
+      shapePreview.classList.add("dragging");
+      
+      const updateGhost = (e) => {
+        if (dragGhost) {
+          dragGhost.style.left = e.clientX + "px";
+          dragGhost.style.top = e.clientY + "px";
+        }
+      };
+      
+      dragMouseMoveHandler = (e) => {
+        if (isDragging && dragGhost) {
+          updateGhost(e);
+          // Update preview on board
+          const boardRect = board.getBoundingClientRect();
+          const x = e.clientX - boardRect.left;
+          const y = e.clientY - boardRect.top;
+          
+          if (x >= 0 && x < boardRect.width && y >= 0 && y < boardRect.height) {
+            const cellSize = boardRect.width / gridSize;
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+            
+            if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+              showPreview(row, col);
+            }
+          } else {
+            clearPreview();
+          }
+        }
+      };
+      
+      dragMouseUpHandler = (e) => {
+        if (isDragging) {
+          isDragging = false;
+          shapePreview.classList.remove("dragging");
+          
+          if (dragGhost) {
+            dragGhost.remove();
+            dragGhost = null;
+          }
+          
+          // Check if dropped on board
+          const boardRect = board.getBoundingClientRect();
+          const x = e.clientX - boardRect.left;
+          const y = e.clientY - boardRect.top;
+          
+          if (x >= 0 && x < boardRect.width && y >= 0 && y < boardRect.height) {
+            const cellSize = boardRect.width / gridSize;
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+            
+            if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+              handleCellClick(row, col);
+            }
+          }
+          
+          clearPreview();
+          document.removeEventListener("mousemove", dragMouseMoveHandler);
+          document.removeEventListener("mouseup", dragMouseUpHandler);
+          dragMouseMoveHandler = null;
+          dragMouseUpHandler = null;
+        }
+      };
+      
+      updateGhost(e);
+      document.addEventListener("mousemove", dragMouseMoveHandler);
+      document.addEventListener("mouseup", dragMouseUpHandler);
+    };
   }
 
   function canPlaceShape(row, col, shape) {
@@ -369,7 +521,7 @@
       boardState[r * gridSize + c] = shapeId;
     }
     renderBoard();
-    checkWin();
+    // checkWin() is called by the caller to handle status messages properly
   }
 
   function removeShape(shapeId) {
@@ -379,8 +531,10 @@
       }
     }
     renderBoard();
-    checkWin();
-    statusText.textContent = "Shape removed. Click a cell to place a new shape.";
+    // Only set status if player didn't win (unlikely after removing, but check anyway)
+    if (!checkWin()) {
+      statusText.textContent = "Shape removed. Click a cell to place a new shape.";
+    }
   }
 
   function clearPreview() {
@@ -481,7 +635,10 @@
           if (canPlaceShape(previewRow, previewCol, shape)) {
             placeShape(previewRow, previewCol, shape, shapeIdCounter++);
             clearPreview();
-            statusText.textContent = "L-shape placed! Select another cell to place the shape.";
+            // Only set status if player didn't win
+            if (!checkWin()) {
+              statusText.textContent = "L-shape placed! Select another cell to place the shape.";
+            }
             return;
           }
         }
@@ -496,7 +653,10 @@
       if (canPlaceShape(anchorRow, anchorCol, shape)) {
         placeShape(anchorRow, anchorCol, shape, shapeIdCounter++);
         clearPreview();
-        statusText.textContent = "L-shape placed! Select another cell to place the shape.";
+        // Only set status if player didn't win
+        if (!checkWin()) {
+          statusText.textContent = "L-shape placed! Select another cell to place the shape.";
+        }
         return;
       }
     }
@@ -569,6 +729,32 @@
     }
   }
 
+  function getRandomWinMessage() {
+    const messages = [
+      "🎉 Poop on your butt! You won!",
+      "🎉 Awesome sauce! You did it!",
+      "🎉 Holy guacamole! You're a winner!",
+      "🎉 That's bananas! You won!",
+      "🎉 You're the bee's knees! You won!",
+      "🎉 That's totally tubular! You won!",
+      "🎉 You're a rock star! You won!",
+      "🎉 Cowabunga! You won!",
+      "🎉 You're the cat's pajamas! You won!",
+      "🎉 That's the bomb dot com! You won!",
+      "🎉 You're cooler than a penguin! You won!",
+      "🎉 That's rad! You won!",
+      "🎉 You're the GOAT! You won!",
+      "🎉 That's sick! You won!",
+      "🎉 You're a legend! You won!",
+      "🎉 No way! You actually did it!",
+      "🎉 Mind blown! You won!",
+      "🎉 You're a puzzle master! You won!",
+      "🎉 That's epic! You won!",
+      "🎉 You're unstoppable! You won!"
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+
   function checkWin() {
     let emptyActiveCells = 0;
     for (let i = 0; i < boardState.length; i++) {
@@ -581,14 +767,17 @@
     if (emptyActiveCells === 0) {
       if (!hasWon) {
         hasWon = true;
-        statusText.textContent = "🎉 Congratulations! You filled the entire grid!";
+        statusText.textContent = getRandomWinMessage();
         statusText.className = "win";
         createConfetti();
+        return true; // Return true if player won
       }
+      return true;
     } else {
       hasWon = false;
       statusText.textContent = `${emptyActiveCells} cell(s) remaining. Keep going!`;
       statusText.className = "";
+      return false; // Return false if not won
     }
   }
 
