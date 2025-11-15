@@ -310,20 +310,24 @@
 
     // Initialize teams
     function initTeams() {
-      // Player team (blue) - starting on left side
+      // Player team (blue) - starting on left side with positions
+      // 2 defenders, 2 strikers, 1 midfielder
       gameState.playerTeam = [
-        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false },
-        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false },
-        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false },
-        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.4, vx: 0, vy: 0, hasBall: false },
-        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.6, vx: 0, vy: 0, hasBall: false }
+        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
+        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false, role: 'midfielder', speed: PLAYER_SPEED },
+        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
+        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.4, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED },
+        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.6, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED }
       ];
 
-      // Opponent team (red) - starting on right side
+      // Opponent team (red) - starting on right side with positions
+      // 2 defenders, 2 strikers, 1 midfielder
       gameState.opponentTeam = [
-        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false },
-        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false },
-        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false },
+        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
+        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false, role: 'midfielder', speed: PLAYER_SPEED },
+        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
+        { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.4, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED },
+        { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.6, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED }
       ];
 
       // Give ball to a random player team member
@@ -360,6 +364,30 @@
       const dist = Math.sqrt(dx * dx + dy * dy);
       return dist < PLAYER_RADIUS + BALL_RADIUS + 8;
     }
+    
+    // Check if a player is offside
+    // Offside: player is past the ball AND past the second-to-last opponent
+    function isOffside(player) {
+      if (!player) return false;
+      
+      // Player must be in opponent's half (left side for player team)
+      if (player.x > FIELD_WIDTH / 2) return false;
+      
+      // Player must be past the ball's x position
+      if (player.x >= gameState.ball.x) return false;
+      
+      // Find second-to-last opponent (last defender)
+      // Sort opponents by x position (closest to player's goal)
+      const opponents = [...gameState.opponentTeam].sort((a, b) => a.x - b.x);
+      
+      if (opponents.length < 2) return false; // Need at least 2 opponents
+      
+      // Second-to-last opponent (second closest to player's goal)
+      const secondLastOpponent = opponents[opponents.length - 2];
+      
+      // Player is offside if they are past the second-to-last opponent
+      return player.x < secondLastOpponent.x;
+    }
 
     // Distance between two points
     function distance(x1, y1, x2, y2) {
@@ -386,9 +414,19 @@
 
         if (moveX !== 0 || moveY !== 0) {
           const len = Math.sqrt(moveX * moveX + moveY * moveY);
-          moveX = (moveX / len) * PLAYER_SPEED;
-          moveY = (moveY / len) * PLAYER_SPEED;
+          // Use role-based speed for controlled player
+          const playerSpeed = player.speed || PLAYER_SPEED;
+          moveX = (moveX / len) * playerSpeed;
+          moveY = (moveY / len) * playerSpeed;
 
+          // Check if moving forward would put player offside
+          const newX = player.x + moveX;
+          const testPlayer = { ...player, x: newX };
+          if (isOffside(testPlayer) && moveX < 0) {
+            // Prevent moving further forward if offside
+            moveX = 0;
+          }
+          
           player.x += moveX;
           player.y += moveY;
 
@@ -425,27 +463,105 @@
         }
       }
 
-      // Update player's teammates - follow controlled player but maintain spacing
+      // Update player's teammates - position based on role
       if (gameState.controlledPlayer) {
+        // Calculate offside line once for all teammates
+        const opponents = [...gameState.opponentTeam].sort((a, b) => a.x - b.x);
+        const secondLastOpponent = opponents.length >= 2 ? opponents[opponents.length - 2] : null;
+        const offsideLineX = secondLastOpponent ? secondLastOpponent.x : gameState.ball.x;
+        const safeOffsideLineX = Math.min(offsideLineX, gameState.ball.x) + 5; // Stay 5px behind offside line
+        
         // Get list of teammates (excluding controlled player)
         const teammates = gameState.playerTeam.filter(p => p !== gameState.controlledPlayer);
-        const totalTeammates = teammates.length;
         
-        teammates.forEach((teammate, index) => {
+        teammates.forEach((teammate) => {
           const controlledX = gameState.controlledPlayer.x;
           const controlledY = gameState.controlledPlayer.y;
+          const controlledRole = gameState.controlledPlayer.role || 'midfielder';
           
-          // Calculate ideal positions around the controlled player
-          // Spread teammates in a circular formation
-          const angleStep = (2 * Math.PI) / totalTeammates;
-          const baseAngle = angleStep * index;
+          // Calculate ideal position based on role
+          let idealX, idealY;
+          const fieldCenterX = FIELD_WIDTH / 2;
+          const fieldCenterY = FIELD_HEIGHT / 2;
           
-          // Formation radius - how far teammates should be from controlled player
-          const formationRadius = 70; // Base distance
+          if (teammate.role === 'defender') {
+            // Defenders stay back near own goal (right side for player team)
+            const goalX = FIELD_WIDTH * 0.85; // Near own goal
+            const goalY = FIELD_HEIGHT / 2;
+            
+            // Position defenders in a line across the field, but stay back
+            const defenderIndex = teammates.filter(t => t.role === 'defender' && t !== teammate).length;
+            const defenderY = goalY + (defenderIndex === 0 ? -30 : 30);
+            
+            idealX = goalX;
+            idealY = defenderY;
+            
+            // If controlled player is also a defender, spread out more
+            if (controlledRole === 'defender') {
+              idealX = controlledX + (defenderIndex === 0 ? -40 : 40);
+              idealY = controlledY + (defenderIndex === 0 ? -25 : 25);
+            }
+          } else if (teammate.role === 'striker') {
+            // Strikers position at the offside line (opponent's defensive line)
+            const strikerIndex = teammates.filter(t => t.role === 'striker' && t !== teammate).length;
+            
+            if (controlledRole === 'striker') {
+              // If controlled player is striker, position other striker alongside at offside line
+              idealX = safeOffsideLineX;
+              idealY = controlledY + (strikerIndex === 0 ? -30 : 30);
+            } else {
+              // Position at offside line, spread out horizontally
+              idealX = safeOffsideLineX;
+              idealY = FIELD_HEIGHT * (strikerIndex === 0 ? 0.3 : 0.7);
+            }
+          } else { // midfielder
+            // Midfielder stays in center, supports the controlled player
+            if (controlledRole === 'midfielder') {
+              idealX = controlledX + 60;
+              idealY = controlledY;
+            } else {
+              idealX = fieldCenterX * 0.6;
+              idealY = fieldCenterY;
+            }
+          }
           
-          // Calculate ideal position
-          const idealX = controlledX + Math.cos(baseAngle) * formationRadius;
-          const idealY = controlledY + Math.sin(baseAngle) * formationRadius;
+          // Ensure ideal position is not offside
+          if (idealX < safeOffsideLineX && idealX < FIELD_WIDTH / 2) {
+            idealX = safeOffsideLineX;
+          }
+          
+          // Adjust based on ball position - move toward ball if it's in their area
+          if (!teammate.hasBall && !gameState.controlledPlayer.hasBall) {
+            const ballDx = gameState.ball.x - idealX;
+            const ballDy = gameState.ball.y - idealY;
+            const ballDist = Math.sqrt(ballDx * ballDx + ballDy * ballDy);
+            
+            // Strikers are more aggressive about moving toward ball (but respect offside)
+            if (teammate.role === 'striker' && ballDist < 100) {
+              let newIdealX = gameState.ball.x + (idealX - gameState.ball.x) * 0.3;
+              let newIdealY = gameState.ball.y + (idealY - gameState.ball.y) * 0.3;
+              
+              // Don't move forward if it would put them offside
+              if (newIdealX >= safeOffsideLineX || newIdealX >= FIELD_WIDTH / 2) {
+                idealX = newIdealX;
+                idealY = newIdealY;
+              } else {
+                // Stay onside but move toward ball horizontally
+                idealX = safeOffsideLineX;
+                idealY = newIdealY;
+              }
+            }
+            // Defenders move toward ball if it's in defensive third
+            else if (teammate.role === 'defender' && gameState.ball.x > FIELD_WIDTH * 0.6 && ballDist < 80) {
+              idealX = gameState.ball.x + (idealX - gameState.ball.x) * 0.5;
+              idealY = gameState.ball.y + (idealY - gameState.ball.y) * 0.5;
+            }
+          }
+          
+          // Final check: ensure ideal position respects offside line
+          if (idealX < safeOffsideLineX && idealX < FIELD_WIDTH / 2) {
+            idealX = safeOffsideLineX;
+          }
           
           // Move towards ideal position
           const dx = idealX - teammate.x;
@@ -455,9 +571,19 @@
           let moveX = 0;
           let moveY = 0;
           
+          // Use role-based speed
+          const teammateSpeed = teammate.speed || PLAYER_SPEED;
+          
           if (dist > 5) { // Only move if not already in position
-            moveX = (dx / dist) * PLAYER_SPEED * 0.6;
-            moveY = (dy / dist) * PLAYER_SPEED * 0.6;
+            moveX = (dx / dist) * teammateSpeed * 0.6;
+            moveY = (dy / dist) * teammateSpeed * 0.6;
+            
+            // Check if moving would put teammate offside
+            const newX = teammate.x + moveX;
+            if (newX < safeOffsideLineX && newX < FIELD_WIDTH / 2) {
+              // Prevent forward movement that would cause offside
+              moveX = Math.max(0, safeOffsideLineX - teammate.x);
+            }
           }
           
           // Maintain spacing from other teammates
@@ -499,9 +625,12 @@
             const ballDist = Math.sqrt(ballDx * ballDx + ballDy * ballDy);
             
             // Only move towards ball if it's close and not with controlled player
-            if (ballDist < 80 && !gameState.controlledPlayer.hasBall) {
-              const ballMoveX = (ballDx / ballDist) * PLAYER_SPEED * 0.3;
-              const ballMoveY = (ballDy / ballDist) * PLAYER_SPEED * 0.3;
+            // Strikers are more aggressive
+            const ballChaseDist = teammate.role === 'striker' ? 100 : 80;
+            if (ballDist < ballChaseDist && !gameState.controlledPlayer.hasBall) {
+              const chaseSpeed = teammate.role === 'striker' ? 0.4 : 0.3;
+              const ballMoveX = (ballDx / ballDist) * teammateSpeed * chaseSpeed;
+              const ballMoveY = (ballDy / ballDist) * teammateSpeed * chaseSpeed;
               moveX += ballMoveX;
               moveY += ballMoveY;
             }
@@ -717,53 +846,144 @@
         gameState.opponentLastPassTime++;
       }
       
-      // Update opponent positions with better spacing
+      // Update opponent positions with role-based positioning
+      // Calculate offside line for opponents (second-to-last player team member)
+      const playerTeamSorted = [...gameState.playerTeam].sort((a, b) => a.x - b.x);
+      const secondLastPlayer = playerTeamSorted.length >= 2 ? playerTeamSorted[playerTeamSorted.length - 2] : null;
+      const opponentOffsideLineX = secondLastPlayer ? secondLastPlayer.x : gameState.ball.x;
+      const safeOpponentOffsideLineX = Math.min(opponentOffsideLineX, gameState.ball.x) + 5; // Stay 5px behind offside line
+      
       gameState.opponentTeam.forEach(player => {
         if (!player.hasBall) {
-          // Move towards ball, but maintain better spacing
-          const dx = gameState.ball.x - player.x;
-          const dy = gameState.ball.y - player.y;
+          // Calculate ideal position based on role
+          let idealX, idealY;
+          const fieldCenterX = FIELD_WIDTH / 2;
+          const fieldCenterY = FIELD_HEIGHT / 2;
+          
+          // Find opponent with ball for positioning reference
+          const opponentWithBall = gameState.opponentTeam.find(p => p.hasBall);
+          const ballX = opponentWithBall ? opponentWithBall.x : gameState.ball.x;
+          const ballY = opponentWithBall ? opponentWithBall.y : gameState.ball.y;
+          
+          if (player.role === 'defender') {
+            // Defenders stay back near own goal (left side for opponent team)
+            const goalX = FIELD_WIDTH * 0.15; // Near own goal
+            const goalY = FIELD_HEIGHT / 2;
+            
+            // Position defenders in a line across the field
+            const defenders = gameState.opponentTeam.filter(p => p.role === 'defender' && p !== player);
+            const defenderIndex = defenders.length;
+            const defenderY = goalY + (defenderIndex === 0 ? -30 : 30);
+            
+            idealX = goalX;
+            idealY = defenderY;
+            
+            // If opponent with ball is also a defender, spread out
+            if (opponentWithBall && opponentWithBall.role === 'defender') {
+              idealX = ballX + (defenderIndex === 0 ? -40 : 40);
+              idealY = ballY + (defenderIndex === 0 ? -25 : 25);
+            }
+          } else if (player.role === 'striker') {
+            // Strikers position at the offside line (player team's defensive line)
+            const strikers = gameState.opponentTeam.filter(p => p.role === 'striker' && p !== player);
+            const strikerIndex = strikers.length;
+            
+            if (opponentWithBall && opponentWithBall.role === 'striker') {
+              // If opponent with ball is striker, position other striker alongside at offside line
+              idealX = safeOpponentOffsideLineX;
+              idealY = ballY + (strikerIndex === 0 ? -30 : 30);
+            } else {
+              // Position at offside line, spread out horizontally
+              idealX = safeOpponentOffsideLineX;
+              idealY = FIELD_HEIGHT * (strikerIndex === 0 ? 0.3 : 0.7);
+            }
+            
+            // Ensure strikers don't go offside
+            if (idealX < safeOpponentOffsideLineX && idealX > FIELD_WIDTH / 2) {
+              idealX = safeOpponentOffsideLineX;
+            }
+          } else { // midfielder
+            // Midfielder stays in center, supports the ball
+            if (opponentWithBall && opponentWithBall.role === 'midfielder') {
+              idealX = ballX + 60;
+              idealY = ballY;
+            } else {
+              idealX = fieldCenterX * 1.4;
+              idealY = fieldCenterY;
+            }
+          }
+          
+          // If ball is free (not with opponent), prioritize moving toward it
+          if (!opponentWithBall) {
+            const ballDx = gameState.ball.x - player.x;
+            const ballDy = gameState.ball.y - player.y;
+            const ballDist = Math.sqrt(ballDx * ballDx + ballDy * ballDy);
+            
+            // All opponents should move toward the ball, but with role-based priority
+            let ballWeight = 0.3; // Base weight for moving toward ball
+            
+            if (player.role === 'striker') {
+              // Strikers prioritize ball more
+              ballWeight = 0.7;
+            } else if (player.role === 'midfielder') {
+              // Midfielders also prioritize ball
+              ballWeight = 0.5;
+            } else if (player.role === 'defender') {
+              // Defenders only move toward ball if it's in their area
+              if (gameState.ball.x < FIELD_WIDTH * 0.4) {
+                ballWeight = 0.6;
+              } else {
+                ballWeight = 0.2;
+              }
+            }
+            
+            // Blend ideal position with ball position
+            idealX = idealX * (1 - ballWeight) + gameState.ball.x * ballWeight;
+            idealY = idealY * (1 - ballWeight) + gameState.ball.y * ballWeight;
+          }
+          
+          // Move towards ideal position
+          const dx = idealX - player.x;
+          const dy = idealY - player.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           
           let moveX = 0;
           let moveY = 0;
           
-          if (dist > 0) {
-            moveX = (dx / dist) * PLAYER_SPEED * 0.7;
-            moveY = (dy / dist) * PLAYER_SPEED * 0.7;
+          // Use role-based speed
+          const playerSpeed = player.speed || PLAYER_SPEED;
+          
+          if (dist > 5) {
+            moveX = (dx / dist) * playerSpeed * 0.6;
+            moveY = (dy / dist) * playerSpeed * 0.6;
+          } else {
+            // Even if close to ideal position, still move toward ball if it's free
+            if (!opponentWithBall) {
+              const ballDx = gameState.ball.x - player.x;
+              const ballDy = gameState.ball.y - player.y;
+              const ballDist = Math.sqrt(ballDx * ballDx + ballDy * ballDy);
+              
+              if (ballDist > 10) {
+                const ballWeight = player.role === 'striker' ? 0.5 : (player.role === 'midfielder' ? 0.3 : 0.2);
+                moveX = (ballDx / ballDist) * playerSpeed * ballWeight;
+                moveY = (ballDy / ballDist) * playerSpeed * ballWeight;
+              }
+            }
           }
           
-          // Better spacing: avoid other players more aggressively
+          // Maintain spacing from other players
           const allOtherPlayers = [...gameState.playerTeam, ...gameState.opponentTeam.filter(p => p !== player)];
           allOtherPlayers.forEach(otherPlayer => {
             const dx2 = player.x - otherPlayer.x;
             const dy2 = player.y - otherPlayer.y;
             const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-            const minDist = PLAYER_RADIUS * 2 + 15; // Increased minimum distance
+            const minDist = PLAYER_RADIUS * 2 + 15;
             
             if (dist2 < minDist && dist2 > 0) {
-              // Push away from other player more strongly
               const angle = Math.atan2(dy2, dx2);
-              const pushStrength = (minDist - dist2) / minDist * 1.5; // Stronger push
+              const pushStrength = (minDist - dist2) / minDist * 1.0;
               moveX += Math.cos(angle) * pushStrength;
               moveY += Math.sin(angle) * pushStrength;
-            }
-          });
-          
-          // Special spacing for opponent teammates - maintain formation
-          gameState.opponentTeam.forEach(teammate => {
-            if (teammate === player) return;
-            const dx2 = player.x - teammate.x;
-            const dy2 = player.y - teammate.y;
-            const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-            const idealDist = PLAYER_RADIUS * 2 + 25; // Ideal distance between opponents
-            
-            if (dist2 < idealDist && dist2 > 0) {
-              // Spread out from teammates
-              const angle = Math.atan2(dy2, dx2);
-              const spreadStrength = (idealDist - dist2) / idealDist * 0.8;
-              moveX += Math.cos(angle) * spreadStrength;
-              moveY += Math.sin(angle) * spreadStrength;
             }
           });
           
@@ -784,9 +1004,12 @@
           let moveX = 0;
           let moveY = 0;
           
+          // Use role-based speed
+          const playerSpeed = player.speed || PLAYER_SPEED;
+          
           if (dist > 0) {
-            moveX = (dx / dist) * PLAYER_SPEED * 0.6;
-            moveY = (dy / dist) * PLAYER_SPEED * 0.6;
+            moveX = (dx / dist) * playerSpeed * 0.6;
+            moveY = (dy / dist) * playerSpeed * 0.6;
           }
           
           // Avoid player's team
@@ -912,6 +1135,9 @@
         gameState.playerTeam.forEach(teammate => {
           if (teammate === gameState.controlledPlayer) return;
           
+          // Skip offside teammates
+          if (isOffside(teammate)) return;
+          
           const dx = teammate.x - gameState.ball.x;
           const dy = teammate.y - gameState.ball.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
@@ -942,11 +1168,14 @@
           }
         });
       } else {
-        // No direction specified - find closest teammate
+        // No direction specified - find closest teammate (not offside)
         console.log('Passing to closest teammate');
         
         gameState.playerTeam.forEach(teammate => {
           if (teammate === gameState.controlledPlayer) return;
+          
+          // Skip offside teammates
+          if (isOffside(teammate)) return;
           
           const dx = teammate.x - gameState.ball.x;
           const dy = teammate.y - gameState.ball.y;
@@ -1123,10 +1352,22 @@
 
       // Draw player team (blue)
       gameState.playerTeam.forEach(player => {
+        // Check if player is offside
+        const offside = isOffside(player);
+        
         ctx.fillStyle = player === gameState.controlledPlayer ? '#3b82f6' : '#60a5fa';
         ctx.beginPath();
         ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Draw offside indicator (red outline)
+        if (offside) {
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, PLAYER_RADIUS + 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         
         // Highlight controlled player
         if (player === gameState.controlledPlayer) {
