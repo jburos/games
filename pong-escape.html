@@ -26,16 +26,19 @@
   .container {
     background: #1e293b;
     border-radius: 20px;
-    padding: 30px;
+    padding: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    max-width: 900px;
+    max-width: 95vw;
     width: 100%;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
   }
 
   h1 {
     text-align: center;
-    margin-bottom: 20px;
-    font-size: 2.5rem;
+    margin-bottom: 15px;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -46,8 +49,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding: 15px;
+    margin-bottom: 15px;
+    padding: 10px 15px;
     background: #0f172a;
     border-radius: 10px;
     flex-wrap: wrap;
@@ -56,12 +59,13 @@
 
   .score-display {
     display: flex;
-    gap: 20px;
+    gap: clamp(10px, 2vw, 20px);
     align-items: center;
+    flex-wrap: wrap;
   }
 
   .score, .wins, .losses {
-    font-size: 1.2rem;
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
     font-weight: bold;
   }
 
@@ -74,7 +78,7 @@
   }
 
   .status {
-    font-size: 1.1rem;
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
     padding: 8px 16px;
     border-radius: 8px;
     background: #334155;
@@ -97,6 +101,16 @@
     border-radius: 10px;
     background: #0f172a;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 100%;
+    height: auto;
+    width: 100%;
+  }
+
+  .canvas-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
   }
 
   .controls {
@@ -123,8 +137,8 @@
 
   button {
     margin-top: 0;
-    padding: 10px 20px;
-    font-size: 0.95rem;
+    padding: clamp(8px, 1.5vw, 10px) clamp(16px, 3vw, 20px);
+    font-size: clamp(0.85rem, 2vw, 0.95rem);
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
     color: white;
     border: none;
@@ -144,7 +158,7 @@
   }
 
   .instructions {
-    margin-top: 20px;
+    margin-top: 15px;
     padding: 15px;
     background: #0f172a;
     border-radius: 10px;
@@ -154,16 +168,40 @@
   .instructions h3 {
     margin-bottom: 10px;
     color: #3b82f6;
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
   }
 
   .instructions ul {
     list-style-position: inside;
     color: #cbd5e1;
     line-height: 1.8;
+    font-size: clamp(0.85rem, 2vw, 1rem);
   }
 
   .instructions li {
     margin-bottom: 5px;
+  }
+
+  @media (max-width: 768px) {
+    .container {
+      padding: 15px;
+      max-width: 100vw;
+    }
+
+    .game-info {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .score-display {
+      justify-content: space-around;
+    }
+  }
+
+  @media (max-height: 700px) {
+    .instructions {
+      display: none;
+    }
   }
 </style>
 </head>
@@ -181,7 +219,9 @@
       <button id="restartBtn">Restart Game</button>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+    </div>
 
     <div class="controls">
       <p>Use <kbd>←</kbd> <kbd>→</kbd> arrow keys to move the paddle</p>
@@ -215,42 +255,108 @@
     let gameState = 'playing'; // 'playing', 'won', 'lost'
     let keys = {};
 
-    // Game dimensions
-    const PIT_WIDTH = canvas.width - 10; // Full width minus wall thickness (5px on each side)
-    const PIT_X = 5; // Start after left wall
-    const PIT_Y = canvas.height - 100;
-    const EXIT_WIDTH = 100;
-    const EXIT_X = (canvas.width - EXIT_WIDTH) / 2;
-    const EXIT_Y = 20;
-    const PADDLE_WIDTH = 120;
-    const PADDLE_HEIGHT = 15;
-    const BALL_RADIUS = 10;
+    // Base game dimensions (aspect ratio 4:3)
+    const BASE_WIDTH = 800;
+    const BASE_HEIGHT = 600;
+    let canvasWidth = BASE_WIDTH;
+    let canvasHeight = BASE_HEIGHT;
+    let scale = 1;
+
+    // Game dimensions (will be calculated based on canvas size)
+    let PIT_WIDTH, PIT_X, PIT_Y, EXIT_WIDTH, EXIT_X, EXIT_Y, PADDLE_WIDTH, PADDLE_HEIGHT, BALL_RADIUS;
 
     // Ball
     let ball = {
-      x: canvas.width / 2,
-      y: canvas.height / 2,
-      vx: (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2),
-      vy: -3 - Math.random() * 2,
-      radius: BALL_RADIUS
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      radius: 0
     };
 
     // Paddle
     let paddle = {
-      x: PIT_X + (PIT_WIDTH - PADDLE_WIDTH) / 2,
-      y: PIT_Y - 5,
-      width: PADDLE_WIDTH,
-      height: PADDLE_HEIGHT,
-      speed: 5
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      speed: 0
     };
 
-    // Walls (boundaries)
-    const walls = [
-      { x: 0, y: 0, width: canvas.width, height: 5 }, // top
-      { x: 0, y: 0, width: 5, height: canvas.height }, // left
-      { x: canvas.width - 5, y: 0, width: 5, height: canvas.height }, // right
-      { x: 0, y: canvas.height - 5, width: canvas.width, height: 5 } // bottom
-    ];
+    // Walls (boundaries) - will be recalculated on resize
+    let walls = [];
+
+    // Function to resize canvas and recalculate dimensions
+    function resizeCanvas() {
+      const container = document.querySelector('.container');
+      const containerRect = container.getBoundingClientRect();
+      const availableWidth = containerRect.width - 40; // Account for padding
+      const availableHeight = window.innerHeight - 200; // Account for UI elements
+      
+      // Calculate canvas size maintaining 4:3 aspect ratio
+      const aspectRatio = BASE_WIDTH / BASE_HEIGHT;
+      let newWidth = Math.min(availableWidth, BASE_WIDTH);
+      let newHeight = newWidth / aspectRatio;
+      
+      // If height is too large, scale based on height instead
+      if (newHeight > availableHeight) {
+        newHeight = Math.min(availableHeight, BASE_HEIGHT);
+        newWidth = newHeight * aspectRatio;
+      }
+      
+      canvasWidth = Math.floor(newWidth);
+      canvasHeight = Math.floor(newHeight);
+      scale = canvasWidth / BASE_WIDTH;
+      
+      // Set canvas size
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      canvas.style.width = canvasWidth + 'px';
+      canvas.style.height = canvasHeight + 'px';
+      
+      // Recalculate game dimensions based on scale
+      PIT_WIDTH = canvasWidth - 10 * scale;
+      PIT_X = 5 * scale;
+      PIT_Y = canvasHeight - 100 * scale;
+      EXIT_WIDTH = 100 * scale;
+      EXIT_X = (canvasWidth - EXIT_WIDTH) / 2;
+      EXIT_Y = 20 * scale;
+      PADDLE_WIDTH = 120 * scale;
+      PADDLE_HEIGHT = 15 * scale;
+      BALL_RADIUS = 10 * scale;
+      
+      // Update ball if it exists
+      if (ball.radius === 0) {
+        ball.x = canvasWidth / 2;
+        ball.y = canvasHeight / 2;
+        ball.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2) * scale;
+        ball.vy = (-3 - Math.random() * 2) * scale;
+        ball.radius = BALL_RADIUS;
+      } else {
+        // Scale existing ball position
+        ball.x = (ball.x / (canvas.width || BASE_WIDTH)) * canvasWidth;
+        ball.y = (ball.y / (canvas.height || BASE_HEIGHT)) * canvasHeight;
+        ball.radius = BALL_RADIUS;
+        ball.vx = ball.vx > 0 ? Math.abs(ball.vx) * scale : -Math.abs(ball.vx) * scale;
+        ball.vy = ball.vy > 0 ? Math.abs(ball.vy) * scale : -Math.abs(ball.vy) * scale;
+      }
+      
+      // Update paddle
+      paddle.width = PADDLE_WIDTH;
+      paddle.height = PADDLE_HEIGHT;
+      paddle.speed = 5 * scale;
+      paddle.x = PIT_X + (PIT_WIDTH - PADDLE_WIDTH) / 2;
+      paddle.y = PIT_Y - 5 * scale;
+      
+      // Recalculate walls
+      const wallThickness = 5 * scale;
+      walls = [
+        { x: 0, y: 0, width: canvasWidth, height: wallThickness }, // top
+        { x: 0, y: 0, width: wallThickness, height: canvasHeight }, // left
+        { x: canvasWidth - wallThickness, y: 0, width: wallThickness, height: canvasHeight }, // right
+        { x: 0, y: canvasHeight - wallThickness, width: canvasWidth, height: wallThickness } // bottom
+      ];
+    }
 
     // Keyboard controls
     document.addEventListener('keydown', (e) => {
@@ -273,10 +379,10 @@
     function restartGame() {
       score = 0;
       gameState = 'playing';
-      ball.x = canvas.width / 2;
-      ball.y = canvas.height / 2;
-      ball.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2);
-      ball.vy = -3 - Math.random() * 2;
+      ball.x = canvasWidth / 2;
+      ball.y = canvasHeight / 2;
+      ball.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2) * scale;
+      ball.vy = (-3 - Math.random() * 2) * scale;
       paddle.x = PIT_X + (PIT_WIDTH - PADDLE_WIDTH) / 2;
       statusElement.textContent = 'Use arrow keys to move paddle';
       statusElement.className = 'status';
@@ -296,7 +402,7 @@
         paddle.x = Math.max(0, paddle.x - paddle.speed);
       }
       if (keys['ArrowRight'] || keys['d'] || keys['D']) {
-        paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
+        paddle.x = Math.min(canvasWidth - paddle.width, paddle.x + paddle.speed);
       }
 
       // Keep paddle aligned with pit
@@ -313,21 +419,22 @@
       ball.y += ball.vy;
 
       // Check collision with walls
-      if (ball.x - ball.radius <= 5) {
-        ball.x = 5 + ball.radius;
+      const wallThickness = 5 * scale;
+      if (ball.x - ball.radius <= wallThickness) {
+        ball.x = wallThickness + ball.radius;
         ball.vx = -ball.vx;
       }
-      if (ball.x + ball.radius >= canvas.width - 5) {
-        ball.x = canvas.width - 5 - ball.radius;
+      if (ball.x + ball.radius >= canvasWidth - wallThickness) {
+        ball.x = canvasWidth - wallThickness - ball.radius;
         ball.vx = -ball.vx;
       }
-      if (ball.y - ball.radius <= 5) {
-        ball.y = 5 + ball.radius;
+      if (ball.y - ball.radius <= wallThickness) {
+        ball.y = wallThickness + ball.radius;
         ball.vy = -ball.vy;
       }
 
       // Check collision with bottom (lose condition)
-      if (ball.y + ball.radius >= canvas.height - 5) {
+      if (ball.y + ball.radius >= canvasHeight - wallThickness) {
         gameState = 'lost';
         statusElement.textContent = 'Game Over';
         statusElement.className = 'status lost';
@@ -364,18 +471,18 @@
       }
 
       // Check collision with goal posts (before checking win condition)
-      const GOAL_POST_WIDTH = 8;
-      const GOAL_POST_HEIGHT = 30;
-      const leftPostX = EXIT_X - GOAL_POST_WIDTH;
+      const GOAL_POST_WIDTH_CHECK = 8 * scale;
+      const GOAL_POST_HEIGHT_CHECK = 30 * scale;
+      const leftPostX = EXIT_X - GOAL_POST_WIDTH_CHECK;
       const rightPostX = EXIT_X + EXIT_WIDTH;
       const crossbarY = EXIT_Y;
-      const crossbarHeight = GOAL_POST_WIDTH;
+      const crossbarHeight = GOAL_POST_WIDTH_CHECK;
       
       // Left goal post (vertical post)
       if (ball.x + ball.radius >= leftPostX &&
           ball.x - ball.radius <= EXIT_X &&
           ball.y + ball.radius >= EXIT_Y &&
-          ball.y - ball.radius <= EXIT_Y + GOAL_POST_HEIGHT) {
+          ball.y - ball.radius <= EXIT_Y + GOAL_POST_HEIGHT_CHECK) {
         // Determine which side of post was hit
         if (ball.x < EXIT_X) {
           // Hit left side of post
@@ -389,10 +496,10 @@
       }
       
       // Right goal post (vertical post)
-      if (ball.x - ball.radius <= rightPostX + GOAL_POST_WIDTH &&
+      if (ball.x - ball.radius <= rightPostX + GOAL_POST_WIDTH_CHECK &&
           ball.x + ball.radius >= rightPostX &&
           ball.y + ball.radius >= EXIT_Y &&
-          ball.y - ball.radius <= EXIT_Y + GOAL_POST_HEIGHT) {
+          ball.y - ball.radius <= EXIT_Y + GOAL_POST_HEIGHT_CHECK) {
         // Determine which side of post was hit
         if (ball.x < rightPostX) {
           // Hit left side of post
@@ -400,7 +507,7 @@
           ball.vx = -Math.abs(ball.vx); // Bounce left
         } else {
           // Hit right side of post
-          ball.x = rightPostX + GOAL_POST_WIDTH + ball.radius;
+          ball.x = rightPostX + GOAL_POST_WIDTH_CHECK + ball.radius;
           ball.vx = Math.abs(ball.vx); // Bounce right
         }
       }
@@ -409,7 +516,7 @@
       if (ball.y + ball.radius >= crossbarY &&
           ball.y - ball.radius <= crossbarY + crossbarHeight &&
           ball.x + ball.radius >= leftPostX &&
-          ball.x - ball.radius <= rightPostX + GOAL_POST_WIDTH &&
+          ball.x - ball.radius <= rightPostX + GOAL_POST_WIDTH_CHECK &&
           ball.vy < 0) { // Only bounce if moving upward
         // Bounce vertically downward
         ball.y = crossbarY + crossbarHeight + ball.radius;
@@ -417,8 +524,8 @@
       }
 
       // Check win condition - ball enters goal (only through the opening, not posts)
-      const goalOpeningTop = EXIT_Y + GOAL_POST_WIDTH;
-      const goalOpeningBottom = goalOpeningTop + 15;
+      const goalOpeningTop = EXIT_Y + GOAL_POST_WIDTH_CHECK;
+      const goalOpeningBottom = goalOpeningTop + 15 * scale;
       if (ball.y - ball.radius <= goalOpeningBottom &&
           ball.y + ball.radius >= goalOpeningTop &&
           ball.x + ball.radius >= EXIT_X &&
@@ -446,7 +553,7 @@
     function draw() {
       // Clear canvas
       ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
       // Draw walls
       ctx.fillStyle = '#334155';
@@ -455,9 +562,9 @@
       });
 
       // Draw goal (top) - goal posts and net
-      const GOAL_POST_WIDTH = 8;
-      const GOAL_POST_HEIGHT = 30;
-      const GOAL_NET_DEPTH = 25;
+      const GOAL_POST_WIDTH = 8 * scale;
+      const GOAL_POST_HEIGHT = 30 * scale;
+      const GOAL_NET_DEPTH = 25 * scale;
       
       // Draw goal posts (left and right)
       ctx.fillStyle = '#ffffff';
@@ -469,12 +576,12 @@
       
       // Draw goal opening
       ctx.fillStyle = '#0f172a';
-      ctx.fillRect(EXIT_X, EXIT_Y + GOAL_POST_WIDTH, EXIT_WIDTH, 15);
+      ctx.fillRect(EXIT_X, EXIT_Y + GOAL_POST_WIDTH, EXIT_WIDTH, 15 * scale);
       
       // Draw net (dashed lines for effect)
       ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([3, 3]);
+      ctx.lineWidth = 2 * scale;
+      ctx.setLineDash([3 * scale, 3 * scale]);
       // Vertical net lines
       for (let i = 0; i <= 4; i++) {
         const x = EXIT_X + (EXIT_WIDTH / 4) * i;
@@ -495,22 +602,22 @@
       
       // Draw goal label
       ctx.fillStyle = '#10b981';
-      ctx.font = 'bold 18px Arial';
+      ctx.font = `bold ${18 * scale}px Arial`;
       ctx.textAlign = 'center';
-      ctx.fillText('GOAL', EXIT_X + EXIT_WIDTH / 2, EXIT_Y - 8);
+      ctx.fillText('GOAL', EXIT_X + EXIT_WIDTH / 2, EXIT_Y - 8 * scale);
 
       // Draw pit
       ctx.fillStyle = '#7f1d1d';
-      ctx.fillRect(PIT_X, PIT_Y, PIT_WIDTH, canvas.height - PIT_Y);
+      ctx.fillRect(PIT_X, PIT_Y, PIT_WIDTH, canvasHeight - PIT_Y);
       ctx.strokeStyle = '#991b1b';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(PIT_X, PIT_Y, PIT_WIDTH, canvas.height - PIT_Y);
+      ctx.lineWidth = 3 * scale;
+      ctx.strokeRect(PIT_X, PIT_Y, PIT_WIDTH, canvasHeight - PIT_Y);
       
       // Draw pit label
       ctx.fillStyle = '#ef4444';
-      ctx.font = 'bold 16px Arial';
+      ctx.font = `bold ${16 * scale}px Arial`;
       ctx.textAlign = 'center';
-      ctx.fillText('PIT', PIT_X + PIT_WIDTH / 2, PIT_Y - 5);
+      ctx.fillText('PIT', PIT_X + PIT_WIDTH / 2, PIT_Y - 5 * scale);
 
       // Draw paddle with rounded ends
       const radius = paddle.height / 2;
@@ -525,7 +632,7 @@
       ctx.fill();
       
       ctx.strokeStyle = '#2563eb';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * scale;
       ctx.stroke();
 
       // Draw ball
@@ -534,7 +641,7 @@
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * scale;
       ctx.stroke();
 
       // Draw ball trail (visual effect)
@@ -548,20 +655,20 @@
       if (gameState === 'won' || gameState === 'lost') {
         // Draw semi-transparent overlay
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
         // Draw message box background
-        const boxWidth = 500;
-        const boxHeight = 150;
-        const boxX = (canvas.width - boxWidth) / 2;
-        const boxY = (canvas.height - boxHeight) / 2;
+        const boxWidth = 500 * scale;
+        const boxHeight = 150 * scale;
+        const boxX = (canvasWidth - boxWidth) / 2;
+        const boxY = (canvasHeight - boxHeight) / 2;
         
         ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
         ctx.strokeStyle = gameState === 'won' ? '#10b981' : '#ef4444';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 3 * scale;
         
         // Draw rounded rectangle
-        const cornerRadius = 15;
+        const cornerRadius = 15 * scale;
         ctx.beginPath();
         ctx.moveTo(boxX + cornerRadius, boxY);
         ctx.lineTo(boxX + boxWidth - cornerRadius, boxY);
@@ -578,16 +685,16 @@
 
         // Draw main message
         ctx.fillStyle = gameState === 'won' ? '#10b981' : '#ef4444';
-        ctx.font = 'bold 36px Arial';
+        ctx.font = `bold ${36 * scale}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const mainMessage = gameState === 'won' ? 'You Scored!' : 'Game Over!';
-        ctx.fillText(mainMessage, canvas.width / 2, boxY + 50);
+        ctx.fillText(mainMessage, canvasWidth / 2, boxY + 50 * scale);
 
         // Draw sub-message
         ctx.fillStyle = '#cbd5e1';
-        ctx.font = '18px Arial';
-        ctx.fillText('Press SPACE to play again', canvas.width / 2, boxY + 100);
+        ctx.font = `${18 * scale}px Arial`;
+        ctx.fillText('Press SPACE to play again', canvasWidth / 2, boxY + 100 * scale);
       }
     }
 
@@ -597,6 +704,18 @@
       draw();
       requestAnimationFrame(gameLoop);
     }
+
+    // Initialize canvas size
+    resizeCanvas();
+    
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        resizeCanvas();
+      }, 100);
+    });
 
     // Start game loop
     gameLoop();
