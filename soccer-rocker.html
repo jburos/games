@@ -1411,12 +1411,15 @@
       
       const player = gameState.controlledPlayer;
       
-      // Find closest opponent with ball
+      // Find closest opponent with ball (or ball near opponent)
       let targetOpponent = null;
       let minDist = Infinity;
       
       gameState.opponentTeam.forEach(opponent => {
-        if (!opponent.hasBall) return;
+        // Check if opponent has ball or ball is very close to opponent
+        const opponentHasBall = opponent.hasBall || playerHasBall(opponent);
+        if (!opponentHasBall) return;
+        
         const dist = distance(player.x, player.y, opponent.x, opponent.y);
         if (dist < STEAL_RANGE && dist < minDist) {
           minDist = dist;
@@ -1425,15 +1428,23 @@
       });
       
       if (targetOpponent) {
-        // Steal the ball
-        const dx = gameState.ball.x - player.x;
-        const dy = gameState.ball.y - player.y;
+        // Steal the ball - move it away from opponent and toward player
+        // Calculate direction from opponent to player
+        const dx = player.x - targetOpponent.x;
+        const dy = player.y - targetOpponent.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const angle = Math.atan2(dy, dx);
         
-        // Push ball toward player
-        gameState.ball.vx = Math.cos(angle) * 3;
-        gameState.ball.vy = Math.sin(angle) * 3;
+        // Move ball away from opponent immediately (in direction toward player)
+        const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 10;
+        gameState.ball.x = targetOpponent.x + Math.cos(angle) * pushDistance;
+        gameState.ball.y = targetOpponent.y + Math.sin(angle) * pushDistance;
+        
+        // Push ball toward player with good velocity
+        gameState.ball.vx = Math.cos(angle) * 4;
+        gameState.ball.vy = Math.sin(angle) * 4;
+        
+        // Clear opponent's ball possession
         targetOpponent.hasBall = false;
         gameState.actionCooldown = 30;
       }
