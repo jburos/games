@@ -425,6 +425,97 @@
         }
       }
 
+      // Update player's teammates - follow controlled player but maintain spacing
+      if (gameState.controlledPlayer) {
+        // Get list of teammates (excluding controlled player)
+        const teammates = gameState.playerTeam.filter(p => p !== gameState.controlledPlayer);
+        const totalTeammates = teammates.length;
+        
+        teammates.forEach((teammate, index) => {
+          const controlledX = gameState.controlledPlayer.x;
+          const controlledY = gameState.controlledPlayer.y;
+          
+          // Calculate ideal positions around the controlled player
+          // Spread teammates in a circular formation
+          const angleStep = (2 * Math.PI) / totalTeammates;
+          const baseAngle = angleStep * index;
+          
+          // Formation radius - how far teammates should be from controlled player
+          const formationRadius = 70; // Base distance
+          
+          // Calculate ideal position
+          const idealX = controlledX + Math.cos(baseAngle) * formationRadius;
+          const idealY = controlledY + Math.sin(baseAngle) * formationRadius;
+          
+          // Move towards ideal position
+          const dx = idealX - teammate.x;
+          const dy = idealY - teammate.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          let moveX = 0;
+          let moveY = 0;
+          
+          if (dist > 5) { // Only move if not already in position
+            moveX = (dx / dist) * PLAYER_SPEED * 0.6;
+            moveY = (dy / dist) * PLAYER_SPEED * 0.6;
+          }
+          
+          // Maintain spacing from other teammates
+          gameState.playerTeam.forEach(otherTeammate => {
+            if (otherTeammate === teammate || otherTeammate === gameState.controlledPlayer) return;
+            
+            const dx2 = teammate.x - otherTeammate.x;
+            const dy2 = teammate.y - otherTeammate.y;
+            const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+            const minDist = PLAYER_RADIUS * 2 + 20; // Minimum distance between teammates
+            
+            if (dist2 < minDist && dist2 > 0) {
+              const angle = Math.atan2(dy2, dx2);
+              const pushStrength = (minDist - dist2) / minDist * 1.0;
+              moveX += Math.cos(angle) * pushStrength;
+              moveY += Math.sin(angle) * pushStrength;
+            }
+          });
+          
+          // Also avoid opponents
+          gameState.opponentTeam.forEach(opponent => {
+            const dx2 = teammate.x - opponent.x;
+            const dy2 = teammate.y - opponent.y;
+            const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+            const avoidDist = PLAYER_RADIUS * 2 + 15;
+            
+            if (dist2 < avoidDist && dist2 > 0) {
+              const angle = Math.atan2(dy2, dx2);
+              const avoidStrength = (avoidDist - dist2) / avoidDist * 0.8;
+              moveX += Math.cos(angle) * avoidStrength;
+              moveY += Math.sin(angle) * avoidStrength;
+            }
+          });
+          
+          // If ball is nearby and teammate doesn't have it, move towards it slightly
+          if (!teammate.hasBall) {
+            const ballDx = gameState.ball.x - teammate.x;
+            const ballDy = gameState.ball.y - teammate.y;
+            const ballDist = Math.sqrt(ballDx * ballDx + ballDy * ballDy);
+            
+            // Only move towards ball if it's close and not with controlled player
+            if (ballDist < 80 && !gameState.controlledPlayer.hasBall) {
+              const ballMoveX = (ballDx / ballDist) * PLAYER_SPEED * 0.3;
+              const ballMoveY = (ballDy / ballDist) * PLAYER_SPEED * 0.3;
+              moveX += ballMoveX;
+              moveY += ballMoveY;
+            }
+          }
+          
+          teammate.x += moveX;
+          teammate.y += moveY;
+          
+          // Keep in bounds
+          teammate.x = Math.max(PLAYER_RADIUS, Math.min(FIELD_WIDTH - PLAYER_RADIUS, teammate.x));
+          teammate.y = Math.max(PLAYER_RADIUS, Math.min(FIELD_HEIGHT - PLAYER_RADIUS, teammate.y));
+        });
+      }
+
       // Update ball physics (only when not controlled by player)
       if (!gameState.controlledPlayer?.hasBall) {
         gameState.ball.x += gameState.ball.vx;
