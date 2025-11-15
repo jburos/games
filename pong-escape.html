@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pong Escape</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: white;
+  }
+
+  .container {
+    background: #1e293b;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-width: 900px;
+    width: 100%;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #0f172a;
+    border-radius: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .score {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+
+  .status {
+    font-size: 1.1rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: #334155;
+  }
+
+  .status.won {
+    background: #10b981;
+    color: white;
+  }
+
+  .status.lost {
+    background: #ef4444;
+    color: white;
+  }
+
+  #gameCanvas {
+    display: block;
+    margin: 0 auto;
+    border: 3px solid #334155;
+    border-radius: 10px;
+    background: #0f172a;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .controls {
+    margin-top: 20px;
+    text-align: center;
+    padding: 15px;
+    background: #0f172a;
+    border-radius: 10px;
+  }
+
+  .controls p {
+    margin-bottom: 10px;
+    color: #cbd5e1;
+  }
+
+  .controls kbd {
+    background: #334155;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin: 0 2px;
+  }
+
+  button {
+    margin-top: 0;
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+  }
+
+  button:active {
+    transform: translateY(0);
+  }
+
+  .instructions {
+    margin-top: 20px;
+    padding: 15px;
+    background: #0f172a;
+    border-radius: 10px;
+    border-left: 4px solid #3b82f6;
+  }
+
+  .instructions h3 {
+    margin-bottom: 10px;
+    color: #3b82f6;
+  }
+
+  .instructions ul {
+    list-style-position: inside;
+    color: #cbd5e1;
+    line-height: 1.8;
+  }
+
+  .instructions li {
+    margin-bottom: 5px;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏓 Pong Escape</h1>
+    
+    <div class="game-info">
+      <div class="score">Score: <span id="score">0</span></div>
+      <div class="status" id="status">Use arrow keys to move paddle</div>
+      <button id="restartBtn">Restart Game</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div class="controls">
+      <p>Use <kbd>←</kbd> <kbd>→</kbd> arrow keys to move the paddle</p>
+    </div>
+
+    <div class="instructions">
+      <h3>How to Play</h3>
+      <ul>
+        <li><strong>Goal:</strong> Guide the ball to the exit opening at the top</li>
+        <li><strong>Block:</strong> Use the paddle to prevent the ball from falling into the pit</li>
+        <li><strong>Angle:</strong> Hit the ball at different angles to direct it toward the exit</li>
+        <li><strong>Win:</strong> Ball enters the exit opening</li>
+        <li><strong>Lose:</strong> Ball falls into the pit</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const statusElement = document.getElementById('status');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // Game state
+    let score = 0;
+    let gameState = 'playing'; // 'playing', 'won', 'lost'
+    let keys = {};
+
+    // Game dimensions
+    const PIT_WIDTH = canvas.width - 10; // Full width minus wall thickness (5px on each side)
+    const PIT_X = 5; // Start after left wall
+    const PIT_Y = canvas.height - 100;
+    const EXIT_WIDTH = 100;
+    const EXIT_X = (canvas.width - EXIT_WIDTH) / 2;
+    const EXIT_Y = 20;
+    const PADDLE_WIDTH = 120;
+    const PADDLE_HEIGHT = 15;
+    const BALL_RADIUS = 10;
+
+    // Ball
+    let ball = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      vx: (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2),
+      vy: -3 - Math.random() * 2,
+      radius: BALL_RADIUS
+    };
+
+    // Paddle
+    let paddle = {
+      x: PIT_X + (PIT_WIDTH - PADDLE_WIDTH) / 2,
+      y: PIT_Y - 5,
+      width: PADDLE_WIDTH,
+      height: PADDLE_HEIGHT,
+      speed: 5
+    };
+
+    // Walls (boundaries)
+    const walls = [
+      { x: 0, y: 0, width: canvas.width, height: 5 }, // top
+      { x: 0, y: 0, width: 5, height: canvas.height }, // left
+      { x: canvas.width - 5, y: 0, width: 5, height: canvas.height }, // right
+      { x: 0, y: canvas.height - 5, width: canvas.width, height: 5 } // bottom
+    ];
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+    });
+
+    document.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    // Restart button
+    restartBtn.addEventListener('click', restartGame);
+
+    function restartGame() {
+      score = 0;
+      gameState = 'playing';
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2);
+      ball.vy = -3 - Math.random() * 2;
+      paddle.x = PIT_X + (PIT_WIDTH - PADDLE_WIDTH) / 2;
+      statusElement.textContent = 'Use arrow keys to move paddle';
+      statusElement.className = 'status';
+      updateScore();
+    }
+
+    function updateScore() {
+      scoreElement.textContent = score;
+    }
+
+    function updatePaddle() {
+      if (gameState !== 'playing') return;
+
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        paddle.x = Math.max(0, paddle.x - paddle.speed);
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        paddle.x = Math.min(canvas.width - paddle.width, paddle.x + paddle.speed);
+      }
+
+      // Keep paddle aligned with pit
+      const minX = PIT_X;
+      const maxX = PIT_X + PIT_WIDTH - PADDLE_WIDTH;
+      paddle.x = Math.max(minX, Math.min(maxX, paddle.x));
+    }
+
+    function updateBall() {
+      if (gameState !== 'playing') return;
+
+      // Update ball position
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Check collision with walls
+      if (ball.x - ball.radius <= 5) {
+        ball.x = 5 + ball.radius;
+        ball.vx = -ball.vx;
+      }
+      if (ball.x + ball.radius >= canvas.width - 5) {
+        ball.x = canvas.width - 5 - ball.radius;
+        ball.vx = -ball.vx;
+      }
+      if (ball.y - ball.radius <= 5) {
+        ball.y = 5 + ball.radius;
+        ball.vy = -ball.vy;
+      }
+
+      // Check collision with bottom (lose condition)
+      if (ball.y + ball.radius >= canvas.height - 5) {
+        gameState = 'lost';
+        statusElement.textContent = 'Game Over! Ball fell into the pit.';
+        statusElement.className = 'status lost';
+        return;
+      }
+
+      // Check collision with paddle
+      if (ball.y + ball.radius >= paddle.y &&
+          ball.y - ball.radius <= paddle.y + paddle.height &&
+          ball.x + ball.radius >= paddle.x &&
+          ball.x - ball.radius <= paddle.x + paddle.width) {
+        
+        // Calculate hit position on paddle (0 = left edge, 1 = right edge)
+        const hitPos = (ball.x - paddle.x) / paddle.width;
+        
+        // Angle based on where ball hits paddle
+        // Center = straight up, edges = more angle
+        const angle = (hitPos - 0.5) * Math.PI * 0.6; // Max 54 degrees
+        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        
+        // Add some speed boost
+        const newSpeed = Math.min(speed * 1.1, 8);
+        
+        ball.vx = Math.sin(angle) * newSpeed;
+        ball.vy = -Math.abs(Math.cos(angle) * newSpeed);
+        
+        // Ensure ball is above paddle
+        ball.y = paddle.y - ball.radius;
+        
+        score += 10;
+        updateScore();
+      }
+
+      // Check win condition - ball enters exit
+      if (ball.y - ball.radius <= EXIT_Y + 10 &&
+          ball.x + ball.radius >= EXIT_X &&
+          ball.x - ball.radius <= EXIT_X + EXIT_WIDTH) {
+        gameState = 'won';
+        statusElement.textContent = 'You Win! Ball escaped!';
+        statusElement.className = 'status won';
+        score += 100;
+        updateScore();
+      }
+
+      // Check lose condition - ball falls into pit
+      if (ball.y >= PIT_Y &&
+          ball.x >= PIT_X &&
+          ball.x <= PIT_X + PIT_WIDTH) {
+        gameState = 'lost';
+        statusElement.textContent = 'Game Over! Ball fell into the pit.';
+        statusElement.className = 'status lost';
+      }
+    }
+
+    function draw() {
+      // Clear canvas
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw walls
+      ctx.fillStyle = '#334155';
+      walls.forEach(wall => {
+        ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
+      });
+
+      // Draw exit opening (top)
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(EXIT_X, EXIT_Y, EXIT_WIDTH, 15);
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(EXIT_X, EXIT_Y, EXIT_WIDTH, 15);
+      
+      // Draw exit label
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('EXIT', EXIT_X + EXIT_WIDTH / 2, EXIT_Y - 5);
+
+      // Draw pit
+      ctx.fillStyle = '#7f1d1d';
+      ctx.fillRect(PIT_X, PIT_Y, PIT_WIDTH, canvas.height - PIT_Y);
+      ctx.strokeStyle = '#991b1b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(PIT_X, PIT_Y, PIT_WIDTH, canvas.height - PIT_Y);
+      
+      // Draw pit label
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('PIT', PIT_X + PIT_WIDTH / 2, PIT_Y - 5);
+
+      // Draw paddle with rounded ends
+      const radius = paddle.height / 2;
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath();
+      ctx.moveTo(paddle.x + radius, paddle.y);
+      ctx.lineTo(paddle.x + paddle.width - radius, paddle.y);
+      ctx.arc(paddle.x + paddle.width - radius, paddle.y + radius, radius, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(paddle.x + radius, paddle.y + paddle.height);
+      ctx.arc(paddle.x + radius, paddle.y + radius, radius, Math.PI / 2, -Math.PI / 2);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw ball
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Draw ball trail (visual effect)
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.arc(ball.x - ball.vx * 2, ball.y - ball.vy * 2, ball.radius * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+    }
+
+    function gameLoop() {
+      updatePaddle();
+      updateBall();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Start game loop
+    gameLoop();
+  </script>
+</body>
+</html>
+
