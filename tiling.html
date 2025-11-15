@@ -825,7 +825,7 @@
   }
 
   function rotateLeft() {
-    currentRotation = (currentRotation + 3) % 4;
+    currentRotation = (currentRotation + 1) % 4;
     renderShapePreview();
     if (previewRow !== null && previewCol !== null) {
       showPreview(previewRow, previewCol);
@@ -833,7 +833,7 @@
   }
 
   function rotateRight() {
-    currentRotation = (currentRotation + 1) % 4;
+    currentRotation = (currentRotation + 3) % 4;
     renderShapePreview();
     if (previewRow !== null && previewCol !== null) {
       showPreview(previewRow, previewCol);

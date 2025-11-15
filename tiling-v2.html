@@ -89,6 +89,34 @@
     user-select: none;
   }
 
+  .shape-option {
+    padding: 15px;
+    margin: 10px;
+    background: #f0f0f0;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+
+  .shape-option:hover {
+    background: #e0e0e0;
+    border-color: #2563eb;
+  }
+
+  .shape-option.active {
+    background: #e0e7ff;
+    border-color: #2563eb;
+  }
+
+  .shape-option h4 {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: #333;
+    text-align: center;
+  }
+
   #shapePreview:active {
     cursor: grabbing;
   }
@@ -246,6 +274,23 @@
 <h1>Tiling Puzzle V2 - Advanced</h1>
 
 <div id="controls">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <label>Shapes:</label>
+    <div style="display: flex; gap: 15px;">
+      <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+        <input type="checkbox" id="shapeL" value="L" checked>
+        <span>L-Shape</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+        <input type="checkbox" id="shapeS" value="S">
+        <span>S-Shape</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+        <input type="checkbox" id="shapeT" value="T">
+        <span>T-Shape</span>
+      </label>
+    </div>
+  </div>
   <label for="gridSizeSelect">Grid Size:</label>
   <select id="gridSizeSelect">
     <option value="4">4x4</option>
@@ -271,12 +316,15 @@
   <div id="board"></div>
 </div>
 
-<div id="status">Click and drag the shape to place it, or click a cell to place the L-shape (click filled cells to remove)</div>
+<div id="status">Select shapes to use, then click and drag or click a cell to place the active shape (click filled cells to remove)</div>
 
 <script>
   const board = document.getElementById("board");
   const statusText = document.getElementById("status");
   const resetBtn = document.getElementById("resetBtn");
+  const shapeLCheckbox = document.getElementById("shapeL");
+  const shapeSCheckbox = document.getElementById("shapeS");
+  const shapeTCheckbox = document.getElementById("shapeT");
   const gridSizeSelect = document.getElementById("gridSizeSelect");
   const rotateLeftBtn = document.getElementById("rotateLeftBtn");
   const rotateRightBtn = document.getElementById("rotateRightBtn");
@@ -293,9 +341,17 @@
   let previewRow = null;
   let previewCol = null;
   let hasWon = false;
+  let selectedShapes = new Set(['L']); // Track which shapes are selected
+  let activeShapeType = 'L'; // Currently active shape for placement
 
-  // L-Shape definition (default)
-  const defaultLShape = [[0,0], [1,0], [2,0], [2,1]];
+  // Shape definitions
+  const shapeDefinitions = {
+    L: [[0,0], [1,0], [2,0], [2,1]],  // L-Shape
+    S: [[0,1], [0,2], [1,0], [1,1]],  // S-Shape (like tetris S)
+    T: [[0,1], [1,0], [1,1], [1,2]]   // T-Shape (like tetris T)
+  };
+  
+  const defaultLShape = shapeDefinitions.L;
   let lShape = defaultLShape;
   let customShapes = [];
   let customGridState = null; // null = all cells active, array = custom grid
@@ -328,8 +384,18 @@
     return normalizeShape(flipped);
   }
 
-  function getCurrentShape() {
-    let shape = normalizeShape(lShape);
+  function getCurrentShape(shapeType = null) {
+    // Get the base shape based on current selection
+    let baseShape;
+    const typeToUse = shapeType || activeShapeType;
+    
+    if (isCustomProblem && customShapes.length > 0) {
+      baseShape = customShapes[0];
+    } else {
+      baseShape = shapeDefinitions[typeToUse] || shapeDefinitions.L;
+    }
+    
+    let shape = normalizeShape(baseShape);
     shape = rotateShape(shape, currentRotation);
     if (currentFlipVertical) {
       shape = flipShape(shape, false);
@@ -339,26 +405,89 @@
     }
     return shape;
   }
+  
+  function getSelectedShapes() {
+    const selected = [];
+    if (shapeLCheckbox.checked) selected.push('L');
+    if (shapeSCheckbox.checked) selected.push('S');
+    if (shapeTCheckbox.checked) selected.push('T');
+    return selected;
+  }
 
   function renderShapePreview() {
-    const shape = getCurrentShape();
-    const maxRow = Math.max(...shape.map(c => c[0]));
-    const maxCol = Math.max(...shape.map(c => c[1]));
+    const selected = getSelectedShapes();
+    
+    if (selected.length === 0) {
+      shapePreviewGrid.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Select at least one shape</p>';
+      return;
+    }
+    
+    // If active shape is not selected, switch to first selected
+    if (!selected.includes(activeShapeType)) {
+      activeShapeType = selected[0];
+    }
     
     shapePreviewGrid.innerHTML = "";
-    shapePreviewGrid.style.gridTemplateColumns = `repeat(${maxCol + 1}, auto)`;
-    shapePreviewGrid.style.gridTemplateRows = `repeat(${maxRow + 1}, auto)`;
+    shapePreviewGrid.style.display = "flex";
+    shapePreviewGrid.style.flexWrap = "wrap";
+    shapePreviewGrid.style.gap = "15px";
+    shapePreviewGrid.style.justifyContent = "center";
     
-    for (let r = 0; r <= maxRow; r++) {
-      for (let c = 0; c <= maxCol; c++) {
-        const cell = document.createElement("div");
-        cell.className = "preview-shape-cell";
-        if (!shape.some(([sr, sc]) => sr === r && sc === c)) {
-          cell.classList.add("empty");
+    selected.forEach(shapeType => {
+      const shapeOption = document.createElement("div");
+      shapeOption.className = `shape-option ${shapeType === activeShapeType ? 'active' : ''}`;
+      shapeOption.dataset.shapeType = shapeType;
+      
+      const title = document.createElement("h4");
+      title.textContent = `${shapeType}-Shape`;
+      shapeOption.appendChild(title);
+      
+      const shapeGrid = document.createElement("div");
+      const baseShape = shapeDefinitions[shapeType];
+      const shape = shapeType === activeShapeType ? getCurrentShape(shapeType) : normalizeShape(baseShape);
+      
+      const maxRow = Math.max(...shape.map(c => c[0]));
+      const maxCol = Math.max(...shape.map(c => c[1]));
+      
+      shapeGrid.style.display = "grid";
+      shapeGrid.style.gridTemplateColumns = `repeat(${maxCol + 1}, auto)`;
+      shapeGrid.style.gap = "3px";
+      shapeGrid.style.padding = "10px";
+      shapeGrid.style.background = "#e5e5e5";
+      shapeGrid.style.borderRadius = "4px";
+      shapeGrid.style.justifyContent = "center";
+      
+      for (let r = 0; r <= maxRow; r++) {
+        for (let c = 0; c <= maxCol; c++) {
+          const cell = document.createElement("div");
+          cell.className = "preview-shape-cell";
+          if (!shape.some(([sr, sc]) => sr === r && sc === c)) {
+            cell.classList.add("empty");
+          }
+          shapeGrid.appendChild(cell);
         }
-        shapePreviewGrid.appendChild(cell);
       }
-    }
+      
+      shapeOption.appendChild(shapeGrid);
+      
+      // Click to activate this shape
+      shapeOption.addEventListener("click", () => {
+        if (shapeType === activeShapeType) {
+          // If clicking the active shape, use it for placement
+          return;
+        }
+        // Switch active shape
+        document.querySelectorAll(".shape-option").forEach(opt => opt.classList.remove("active"));
+        shapeOption.classList.add("active");
+        activeShapeType = shapeType;
+        currentRotation = 0;
+        currentFlipVertical = false;
+        currentFlipHorizontal = false;
+        renderShapePreview();
+      });
+      
+      shapePreviewGrid.appendChild(shapeOption);
+    });
     
     // Make preview draggable
     setupDragAndDrop();
@@ -413,19 +542,36 @@
       document.removeEventListener("mouseup", dragMouseUpHandler);
     }
     
-    // Use event delegation to avoid re-adding listeners
-    shapePreview.onmousedown = (e) => {
+    // Use event delegation on the preview grid
+    shapePreviewGrid.onmousedown = (e) => {
       // Don't start drag if clicking on buttons or controls
       if (e.target.tagName === 'BUTTON' || e.target.closest('#rotationControls')) {
         return;
       }
       
+      // Find which shape was clicked
+      const clickedShapeOption = e.target.closest(".shape-option");
+      if (!clickedShapeOption) return;
+      
+      const shapeType = clickedShapeOption.dataset.shapeType;
+      if (!shapeType || !getSelectedShapes().includes(shapeType)) return;
+      
+      // Activate this shape if not already active
+      if (shapeType !== activeShapeType) {
+        activeShapeType = shapeType;
+        currentRotation = 0;
+        currentFlipVertical = false;
+        currentFlipHorizontal = false;
+        renderShapePreview();
+        return; // Re-render and let user click again
+      }
+      
       e.preventDefault();
       isDragging = true;
-      const shape = getCurrentShape();
+      const shape = getCurrentShape(shapeType);
       dragGhost = createDragGhost(shape);
       document.body.appendChild(dragGhost);
-      shapePreview.classList.add("dragging");
+      clickedShapeOption.classList.add("dragging");
       
       const updateGhost = (e) => {
         if (dragGhost) {
@@ -459,7 +605,7 @@
       dragMouseUpHandler = (e) => {
         if (isDragging) {
           isDragging = false;
-          shapePreview.classList.remove("dragging");
+          document.querySelectorAll(".shape-option").forEach(opt => opt.classList.remove("dragging"));
           
           if (dragGhost) {
             dragGhost.remove();
@@ -637,7 +783,7 @@
             clearPreview();
             // Only set status if player didn't win
             if (!checkWin()) {
-              statusText.textContent = "L-shape placed! Select another cell to place the shape.";
+              statusText.textContent = "Shape placed! Select another cell to place the shape.";
             }
             return;
           }
@@ -655,14 +801,14 @@
         clearPreview();
         // Only set status if player didn't win
         if (!checkWin()) {
-          statusText.textContent = "L-shape placed! Select another cell to place the shape.";
+          statusText.textContent = "Shape placed! Select another cell to place the shape.";
         }
         return;
       }
     }
     
     // If we get here, couldn't place the shape
-    statusText.textContent = "Cannot place L-shape here. Try another position.";
+    statusText.textContent = "Cannot place shape here. Try another position.";
     statusText.style.color = "#dc2626";
     setTimeout(() => {
       statusText.style.color = "#333";
@@ -825,7 +971,7 @@
   }
 
   function rotateLeft() {
-    currentRotation = (currentRotation + 3) % 4;
+    currentRotation = (currentRotation + 1) % 4;
     renderShapePreview();
     if (previewRow !== null && previewCol !== null) {
       showPreview(previewRow, previewCol);
@@ -833,7 +979,7 @@
   }
 
   function rotateRight() {
-    currentRotation = (currentRotation + 1) % 4;
+    currentRotation = (currentRotation + 3) % 4;
     renderShapePreview();
     if (previewRow !== null && previewCol !== null) {
       showPreview(previewRow, previewCol);
@@ -857,6 +1003,24 @@
   }
 
   resetBtn.addEventListener("click", resetGame);
+  
+  // Handle shape checkbox changes
+  [shapeLCheckbox, shapeSCheckbox, shapeTCheckbox].forEach(checkbox => {
+    checkbox.addEventListener("change", () => {
+      const selected = getSelectedShapes();
+      if (selected.length === 0) {
+        // At least one shape must be selected
+        checkbox.checked = true;
+        return;
+      }
+      selectedShapes = new Set(selected);
+      if (!selected.includes(activeShapeType)) {
+        activeShapeType = selected[0];
+      }
+      renderShapePreview();
+    });
+  });
+  
   gridSizeSelect.addEventListener("change", resetGame);
   rotateLeftBtn.addEventListener("click", rotateLeft);
   rotateRightBtn.addEventListener("click", rotateRight);
