@@ -399,15 +399,14 @@
       ball.x = minX + Math.random() * (maxX - minX);
       ball.y = minY + Math.random() * (maxY - minY);
       
-      // Calculate distances to each wall
+      // Calculate distances to each wall (excluding top/goal)
       const distToTop = ball.y - wallThickness;
       const distToLeft = ball.x - wallThickness;
       const distToRight = canvasWidth - wallThickness - ball.x;
       const distToBottom = canvasHeight - wallThickness - ball.y;
       
-      // Find the closest wall
+      // Find the closest wall (excluding top/goal)
       const distances = [
-        { wall: 'top', dist: distToTop },
         { wall: 'left', dist: distToLeft },
         { wall: 'right', dist: distToRight },
         { wall: 'bottom', dist: distToBottom }
@@ -417,14 +416,10 @@
         current.dist < min.dist ? current : min
       );
       
-      // Set velocity towards the closest wall
+      // Set velocity towards the closest wall (never towards goal/top)
       const baseSpeed = (3 + Math.random() * 2) * scale;
       
       switch(closestWall.wall) {
-        case 'top': // Move towards top wall
-          ball.vx = (Math.random() - 0.5) * baseSpeed * 0.5; // Small horizontal component
-          ball.vy = -baseSpeed; // Move up
-          break;
         case 'left': // Move towards left wall
           ball.vx = -baseSpeed; // Move left
           ball.vy = (Math.random() - 0.5) * baseSpeed * 0.5; // Small vertical component
@@ -665,12 +660,6 @@
         ctx.stroke();
       }
       ctx.setLineDash([]);
-      
-      // Draw goal label
-      ctx.fillStyle = '#10b981';
-      ctx.font = `bold ${18 * scale}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.fillText('GOAL', EXIT_X + EXIT_WIDTH / 2, EXIT_Y - 8 * scale);
 
       // Draw pit
       ctx.fillStyle = '#7f1d1d';
@@ -678,12 +667,6 @@
       ctx.strokeStyle = '#991b1b';
       ctx.lineWidth = 3 * scale;
       ctx.strokeRect(PIT_X, PIT_Y, PIT_WIDTH, canvasHeight - PIT_Y);
-      
-      // Draw pit label
-      ctx.fillStyle = '#ef4444';
-      ctx.font = `bold ${16 * scale}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.fillText('PIT', PIT_X + PIT_WIDTH / 2, PIT_Y - 5 * scale);
 
       // Draw paddle with rounded ends
       const radius = paddle.height / 2;
