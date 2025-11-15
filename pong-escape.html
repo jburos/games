@@ -441,19 +441,27 @@
       );
       
       // Set velocity towards the closest wall (never towards goal/top)
+      // Ensure angle is never too close to horizontal (minimum 30 degrees from horizontal)
       const baseSpeed = (3 + Math.random() * 2) * scale;
+      const minVerticalRatio = 0.5; // Minimum vertical/horizontal ratio (tan of ~30 degrees)
       
       switch(closestWall.wall) {
         case 'left': // Move towards left wall
+          // Ensure significant vertical component (at least 50% of horizontal)
+          const leftVertical = (0.5 + Math.random() * 0.5) * baseSpeed * minVerticalRatio;
           ball.vx = -baseSpeed; // Move left
-          ball.vy = (Math.random() - 0.5) * baseSpeed * 0.5; // Small vertical component
+          ball.vy = (Math.random() > 0.5 ? 1 : -1) * leftVertical; // Vertical component
           break;
         case 'right': // Move towards right wall
+          // Ensure significant vertical component (at least 50% of horizontal)
+          const rightVertical = (0.5 + Math.random() * 0.5) * baseSpeed * minVerticalRatio;
           ball.vx = baseSpeed; // Move right
-          ball.vy = (Math.random() - 0.5) * baseSpeed * 0.5; // Small vertical component
+          ball.vy = (Math.random() > 0.5 ? 1 : -1) * rightVertical; // Vertical component
           break;
         case 'bottom': // Move towards bottom wall
-          ball.vx = (Math.random() - 0.5) * baseSpeed * 0.5; // Small horizontal component
+          // Ensure significant horizontal component (at least 50% of vertical)
+          const bottomHorizontal = (0.5 + Math.random() * 0.5) * baseSpeed * minVerticalRatio;
+          ball.vx = (Math.random() > 0.5 ? 1 : -1) * bottomHorizontal; // Horizontal component
           ball.vy = baseSpeed; // Move down
           break;
       }
