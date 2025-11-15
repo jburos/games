@@ -327,11 +327,7 @@
       
       // Update ball if it exists
       if (ball.radius === 0) {
-        ball.x = canvasWidth / 2;
-        ball.y = canvasHeight / 2;
-        ball.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2) * scale;
-        ball.vy = (-3 - Math.random() * 2) * scale;
-        ball.radius = BALL_RADIUS;
+        initializeBall();
       } else {
         // Scale existing ball position
         ball.x = (ball.x / (canvas.width || BASE_WIDTH)) * canvasWidth;
@@ -389,16 +385,70 @@
       keys[e.key] = false;
     });
 
+    // Function to initialize ball at random position moving towards closest wall
+    function initializeBall() {
+      const wallThickness = 5 * scale;
+      const margin = 50 * scale; // Keep ball away from edges
+      
+      // Random position (avoid edges and goal/pit areas)
+      const minX = margin + BALL_RADIUS;
+      const maxX = canvasWidth - margin - BALL_RADIUS;
+      const minY = margin + BALL_RADIUS + (30 * scale); // Below goal area
+      const maxY = canvasHeight - margin - BALL_RADIUS - (100 * scale); // Above pit area
+      
+      ball.x = minX + Math.random() * (maxX - minX);
+      ball.y = minY + Math.random() * (maxY - minY);
+      
+      // Calculate distances to each wall
+      const distToTop = ball.y - wallThickness;
+      const distToLeft = ball.x - wallThickness;
+      const distToRight = canvasWidth - wallThickness - ball.x;
+      const distToBottom = canvasHeight - wallThickness - ball.y;
+      
+      // Find the closest wall
+      const distances = [
+        { wall: 'top', dist: distToTop },
+        { wall: 'left', dist: distToLeft },
+        { wall: 'right', dist: distToRight },
+        { wall: 'bottom', dist: distToBottom }
+      ];
+      
+      const closestWall = distances.reduce((min, current) => 
+        current.dist < min.dist ? current : min
+      );
+      
+      // Set velocity towards the closest wall
+      const baseSpeed = (3 + Math.random() * 2) * scale;
+      
+      switch(closestWall.wall) {
+        case 'top': // Move towards top wall
+          ball.vx = (Math.random() - 0.5) * baseSpeed * 0.5; // Small horizontal component
+          ball.vy = -baseSpeed; // Move up
+          break;
+        case 'left': // Move towards left wall
+          ball.vx = -baseSpeed; // Move left
+          ball.vy = (Math.random() - 0.5) * baseSpeed * 0.5; // Small vertical component
+          break;
+        case 'right': // Move towards right wall
+          ball.vx = baseSpeed; // Move right
+          ball.vy = (Math.random() - 0.5) * baseSpeed * 0.5; // Small vertical component
+          break;
+        case 'bottom': // Move towards bottom wall
+          ball.vx = (Math.random() - 0.5) * baseSpeed * 0.5; // Small horizontal component
+          ball.vy = baseSpeed; // Move down
+          break;
+      }
+      
+      ball.radius = BALL_RADIUS;
+    }
+
     // Restart button
     restartBtn.addEventListener('click', restartGame);
 
     function restartGame() {
       score = 0;
       gameState = 'playing';
-      ball.x = canvasWidth / 2;
-      ball.y = canvasHeight / 2;
-      ball.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2) * scale;
-      ball.vy = (-3 - Math.random() * 2) * scale;
+      initializeBall();
       paddle.x = PIT_X + (PIT_WIDTH - PADDLE_WIDTH) / 2;
       statusElement.textContent = 'Use arrow keys to move paddle';
       statusElement.className = 'status';
