@@ -474,7 +474,7 @@
 
   function rotatePiece() {
     const piece = PIECES[currentPiece];
-    const nextRotation = (currentRotation + 1) % piece.shapes.length;
+    const nextRotation = (currentRotation - 1 + piece.shapes.length) % piece.shapes.length;
     const oldRotation = currentRotation;
     currentRotation = nextRotation;
     
