@@ -237,7 +237,7 @@
         <span class="score player-score">You: <span id="playerScore">0</span></span>
         <span class="score opponent-score">Opponent: <span id="opponentScore">0</span></span>
       </div>
-      <div class="status" id="gameStatus">Arrow keys: move | A+Arrow: pass | S: shoot | D: steal</div>
+      <div class="status" id="gameStatus">Arrow keys: move | A+Arrow: pass | S: shoot | D: steal | W: speed-up</div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -250,7 +250,7 @@
 
     <div class="instructions">
       <strong>How to Play:</strong> Use arrow keys to move your player (dribbles automatically when you have the ball). 
-      You control the player with the ball (or closest to it). Press <strong>A + Arrow</strong> to pass in that direction, <strong>S</strong> to shoot, or <strong>D</strong> to steal from opponent. Score goals to win!
+      You control the player with the ball (or closest to it). Press <strong>A + Arrow</strong> to pass in that direction, <strong>S</strong> to shoot, <strong>D</strong> to steal from opponent, or <strong>W</strong> to speed-up (when available - look for the gold ring!). Score goals to win!
     </div>
   </div>
 
@@ -290,6 +290,9 @@
     const STEAL_RANGE = 30;
     const DEFENDER_SWITCH_HYSTERESIS = 15; // Only switch if new defender is this much closer
     const DEFENDER_SWITCH_COOLDOWN = 30; // Frames before can switch again
+    const SPEED_UP_MULTIPLIER = 2.0; // Speed multiplier when speed-up is active
+    const SPEED_UP_DURATION = 45; // Frames the speed-up burst lasts (~0.75 seconds at 60fps)
+    const SPEED_UP_AVAILABILITY_CHANCE = 0.001; // Chance per frame for speed-up to become available (0.1% per frame = rare)
 
     // Game state
     let gameState = {
@@ -318,21 +321,21 @@
       // Player team (blue) - starting on left side with positions
       // 2 defenders, 2 strikers, 1 midfielder
       gameState.playerTeam = [
-        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
-        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false, role: 'midfielder', speed: PLAYER_SPEED },
-        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
-        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.4, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED },
-        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.6, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED }
+        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false, role: 'midfielder', speed: PLAYER_SPEED, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.2, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.4, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.15, y: FIELD_HEIGHT * 0.6, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 }
       ];
 
       // Opponent team (red) - starting on right side with positions
       // 2 defenders, 2 strikers, 1 midfielder
       gameState.opponentTeam = [
-        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
-        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false, role: 'midfielder', speed: PLAYER_SPEED },
-        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15 },
-        { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.4, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED },
-        { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.6, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED }
+        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.3, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.5, vx: 0, vy: 0, hasBall: false, role: 'midfielder', speed: PLAYER_SPEED, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.8, y: FIELD_HEIGHT * 0.7, vx: 0, vy: 0, hasBall: false, role: 'striker', speed: PLAYER_SPEED * 1.15, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.4, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 },
+        { x: FIELD_WIDTH * 0.85, y: FIELD_HEIGHT * 0.6, vx: 0, vy: 0, hasBall: false, role: 'defender', speed: PLAYER_SPEED, speedUpAvailable: false, speedUpActive: false, speedUpTimer: 0 }
       ];
 
       // Give ball to a random player team member
@@ -402,6 +405,26 @@
       if (gameState.actionCooldown > 0) {
         gameState.actionCooldown--;
       }
+      
+      // Update speed-up timers and random availability for all players
+      [...gameState.playerTeam, ...gameState.opponentTeam].forEach(player => {
+        // Update active speed-up timer
+        if (player.speedUpActive && player.speedUpTimer > 0) {
+          player.speedUpTimer--;
+          if (player.speedUpTimer === 0) {
+            // Speed-up expired
+            player.speedUpActive = false;
+            player.speedUpAvailable = false;
+          }
+        }
+        
+        // Random chance for speed-up to become available (only if not already available or active)
+        if (!player.speedUpAvailable && !player.speedUpActive) {
+          if (Math.random() < SPEED_UP_AVAILABILITY_CHANCE) {
+            player.speedUpAvailable = true;
+          }
+        }
+      });
 
       // Update controlled player movement
       if (gameState.controlledPlayer) {
@@ -418,7 +441,13 @@
         if (moveX !== 0 || moveY !== 0) {
           const len = Math.sqrt(moveX * moveX + moveY * moveY);
           // Use role-based speed for controlled player
-          const playerSpeed = player.speed || PLAYER_SPEED;
+          let playerSpeed = player.speed || PLAYER_SPEED;
+          
+          // Apply speed-up if active
+          if (player.speedUpActive) {
+            playerSpeed *= SPEED_UP_MULTIPLIER;
+          }
+          
           moveX = (moveX / len) * playerSpeed;
           moveY = (moveY / len) * playerSpeed;
 
@@ -690,13 +719,18 @@
       // Find who has the ball
       // Optimize ball possession check with squared distances
       const possessionDistSq = (PLAYER_RADIUS + BALL_RADIUS + 8) ** 2;
+      // Check if ball has significant velocity (recently shot/passed) - don't allow possession if moving fast
+      const ballSpeedSq = gameState.ball.vx * gameState.ball.vx + gameState.ball.vy * gameState.ball.vy;
+      const maxBallSpeedForPossession = 2.0; // Maximum speed at which possession is allowed (prevents immediate re-possession after shots)
+      
       allPlayers.forEach(player => {
         const dx = player.x - gameState.ball.x;
         const dy = player.y - gameState.ball.y;
         const distSq = dx * dx + dy * dy;
         
         // Check if player can take possession
-        if (distSq < possessionDistSq) {
+        // Don't allow possession if ball is moving too fast (recently shot/passed)
+        if (distSq < possessionDistSq && ballSpeedSq < maxBallSpeedForPossession * maxBallSpeedForPossession) {
           const dist = Math.sqrt(distSq);
           if (dist < minDistToBall) {
             minDistToBall = dist;
@@ -1215,18 +1249,15 @@
     // Actions
     function pass(directionX, directionY) {
       if (!gameState.controlledPlayer) {
-        console.log('Pass failed: no controlled player');
         return;
       }
       
       if (gameState.actionCooldown > 0) {
-        console.log('Pass failed: cooldown active', gameState.actionCooldown);
         return;
       }
       
       // Check if player actually has the ball
       if (!playerHasBall(gameState.controlledPlayer)) {
-        console.log('Pass failed: player does not have ball');
         return;
       }
       
@@ -1236,8 +1267,6 @@
       
       // If direction is specified, use directional passing
       if (directionX !== 0 || directionY !== 0) {
-        console.log('Passing with direction:', directionX, directionY);
-        
         // Normalize direction
         const len = Math.sqrt(directionX * directionX + directionY * directionY);
         directionX = directionX / len;
@@ -1281,8 +1310,6 @@
         });
       } else {
         // No direction specified - find closest teammate (not offside)
-        console.log('Passing to closest teammate');
-        
         gameState.playerTeam.forEach(teammate => {
           if (teammate === gameState.controlledPlayer) return;
           
@@ -1321,36 +1348,41 @@
         const passAngle = angle + error;
         
         // Move ball away from player immediately to prevent re-possession
-        const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 5;
+        // Use larger push distance to ensure ball is out of possession range
+        const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 15;
         gameState.ball.x = gameState.controlledPlayer.x + Math.cos(passAngle) * pushDistance;
         gameState.ball.y = gameState.controlledPlayer.y + Math.sin(passAngle) * pushDistance;
         
+        // Set ball velocity
         gameState.ball.vx = Math.cos(passAngle) * PASS_POWER;
         gameState.ball.vy = Math.sin(passAngle) * PASS_POWER;
+        
+        // Clear player's ball possession
         gameState.controlledPlayer.hasBall = false;
         gameState.actionCooldown = 30;
-        console.log('Passed to teammate at distance:', dist);
       } else {
         // No teammate found - pass in direction or to closest teammate
         let passAngle;
         if (directionX !== 0 || directionY !== 0) {
           // Directional pass
           passAngle = Math.atan2(directionY, directionX);
-          console.log('Passed in direction (no teammate found)');
         } else {
           // No direction - this shouldn't happen if we found a teammate above
           // But just in case, pass forward
           passAngle = Math.atan2(0, 1); // Right
-          console.log('Passed forward (fallback)');
         }
         
         // Move ball away from player immediately to prevent re-possession
-        const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 5;
+        // Use larger push distance to ensure ball is out of possession range
+        const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 15;
         gameState.ball.x = gameState.controlledPlayer.x + Math.cos(passAngle) * pushDistance;
         gameState.ball.y = gameState.controlledPlayer.y + Math.sin(passAngle) * pushDistance;
         
+        // Set ball velocity
         gameState.ball.vx = Math.cos(passAngle) * PASS_POWER;
         gameState.ball.vy = Math.sin(passAngle) * PASS_POWER;
+        
+        // Clear player's ball possession
         gameState.controlledPlayer.hasBall = false;
         gameState.actionCooldown = 30;
       }
@@ -1408,12 +1440,16 @@
       const randomAngle = angle + (Math.random() - 0.5) * 0.3;
       
       // Move ball away from player immediately to prevent re-possession
-      const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 5;
+      // Use larger push distance to ensure ball is out of possession range
+      const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 15;
       gameState.ball.x = gameState.controlledPlayer.x + Math.cos(randomAngle) * pushDistance;
       gameState.ball.y = gameState.controlledPlayer.y + Math.sin(randomAngle) * pushDistance;
       
+      // Set ball velocity
       gameState.ball.vx = Math.cos(randomAngle) * SHOOT_POWER;
       gameState.ball.vy = Math.sin(randomAngle) * SHOOT_POWER;
+      
+      // Clear player's ball possession
       gameState.controlledPlayer.hasBall = false;
       gameState.actionCooldown = 40;
     }
@@ -1471,6 +1507,24 @@
         ctx.beginPath();
         ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Draw speed-up available indicator (yellow/gold ring)
+        if (player.speedUpAvailable && !player.speedUpActive) {
+          ctx.strokeStyle = '#fbbf24'; // Gold/yellow color
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        
+        // Draw speed-up active indicator (bright yellow ring)
+        if (player.speedUpActive) {
+          ctx.strokeStyle = '#facc15'; // Bright yellow
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         
         // Draw offside indicator (red outline)
         if (offside) {
@@ -1571,6 +1625,21 @@
           pass(0, 0);
         }
         return;
+      }
+      
+      // Track W key for speed-up
+      if (key === 'w') {
+        gameState.keys['w'] = true;
+        gameState.keys['W'] = true;
+        e.preventDefault();
+        
+        // Activate speed-up if available
+        if (gameState.controlledPlayer && gameState.controlledPlayer.speedUpAvailable && !gameState.controlledPlayer.speedUpActive) {
+          gameState.controlledPlayer.speedUpActive = true;
+          gameState.controlledPlayer.speedUpAvailable = false;
+          gameState.controlledPlayer.speedUpTimer = SPEED_UP_DURATION;
+        }
+        return;
       } else if (key === 's') {
         e.preventDefault();
         shoot();
@@ -1588,6 +1657,12 @@
       if (key === 'a') {
         gameState.keys['a'] = false;
         gameState.keys['A'] = false;
+      }
+      
+      // Track W key release
+      if (key === 'w' || key === 'W') {
+        gameState.keys['w'] = false;
+        gameState.keys['W'] = false;
       }
     });
 
