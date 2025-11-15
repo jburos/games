@@ -318,25 +318,20 @@
       canvasHeight = Math.floor(newHeight);
       scale = canvasWidth / BASE_WIDTH;
       
-      // Handle high-DPI displays - but limit for performance
-      const dpr = window.devicePixelRatio || 1;
-      // For performance, use 1x DPR on high-res screens (sacrifice some sharpness for speed)
-      // Or cap at 1.5x for a balance
-      const effectiveDPR = dpr > 1.5 ? 1.5 : 1;
+      // Handle high-DPI displays - force 1x for performance on all screens
+      // This sacrifices some sharpness but ensures consistent performance
+      const effectiveDPR = 1;
       
-      // Set canvas size (internal resolution)
-      canvas.width = canvasWidth * effectiveDPR;
-      canvas.height = canvasHeight * effectiveDPR;
+      // Set canvas size (internal resolution = display size for performance)
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
       
       // Set canvas display size (CSS)
       canvas.style.width = canvasWidth + 'px';
       canvas.style.height = canvasHeight + 'px';
       
-      // Reset and scale the context to handle high-DPI
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-      if (effectiveDPR !== 1) {
-        ctx.scale(effectiveDPR, effectiveDPR);
-      }
+      // Reset transform (no scaling needed since we're using 1x)
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       
       // Recalculate game dimensions based on scale
       PIT_WIDTH = canvasWidth - 10 * scale;
