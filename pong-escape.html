@@ -54,9 +54,19 @@
     gap: 10px;
   }
 
-  .score {
+  .score-display {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .score, .goals {
     font-size: 1.2rem;
     font-weight: bold;
+  }
+
+  .goals {
+    color: #10b981;
   }
 
   .status {
@@ -158,7 +168,10 @@
     <h1>🏓 Pong Escape</h1>
     
     <div class="game-info">
-      <div class="score">Score: <span id="score">0</span></div>
+      <div class="score-display">
+        <div class="score">Score: <span id="score">0</span></div>
+        <div class="goals">Goals: <span id="goals">0</span></div>
+      </div>
       <div class="status" id="status">Use arrow keys to move paddle</div>
       <button id="restartBtn">Restart Game</button>
     </div>
@@ -172,10 +185,10 @@
     <div class="instructions">
       <h3>How to Play</h3>
       <ul>
-        <li><strong>Goal:</strong> Guide the ball to the exit opening at the top</li>
-        <li><strong>Block:</strong> Use the paddle to prevent the ball from falling into the pit</li>
-        <li><strong>Angle:</strong> Hit the ball at different angles to direct it toward the exit</li>
-        <li><strong>Win:</strong> Ball enters the exit opening</li>
+        <li><strong>Score:</strong> Guide the ball into the goal at the top to score</li>
+        <li><strong>Defend:</strong> Use the paddle to prevent the ball from falling into the pit</li>
+        <li><strong>Angle:</strong> Hit the ball at different angles to direct it toward the goal</li>
+        <li><strong>Win:</strong> Ball enters the goal - you scored!</li>
         <li><strong>Lose:</strong> Ball falls into the pit</li>
       </ul>
     </div>
@@ -185,11 +198,13 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreElement = document.getElementById('score');
+    const goalsElement = document.getElementById('goals');
     const statusElement = document.getElementById('status');
     const restartBtn = document.getElementById('restartBtn');
 
     // Game state
     let score = 0;
+    let goals = 0;
     let gameState = 'playing'; // 'playing', 'won', 'lost'
     let keys = {};
 
@@ -244,6 +259,7 @@
 
     function restartGame() {
       score = 0;
+      goals = 0;
       gameState = 'playing';
       ball.x = canvas.width / 2;
       ball.y = canvas.height / 2;
@@ -257,6 +273,7 @@
 
     function updateScore() {
       scoreElement.textContent = score;
+      goalsElement.textContent = goals;
     }
 
     function updatePaddle() {
@@ -331,13 +348,70 @@
         updateScore();
       }
 
-      // Check win condition - ball enters exit
-      if (ball.y - ball.radius <= EXIT_Y + 10 &&
+      // Check collision with goal posts (before checking win condition)
+      const GOAL_POST_WIDTH = 8;
+      const GOAL_POST_HEIGHT = 30;
+      const leftPostX = EXIT_X - GOAL_POST_WIDTH;
+      const rightPostX = EXIT_X + EXIT_WIDTH;
+      const crossbarY = EXIT_Y;
+      const crossbarHeight = GOAL_POST_WIDTH;
+      
+      // Left goal post (vertical post)
+      if (ball.x + ball.radius >= leftPostX &&
+          ball.x - ball.radius <= EXIT_X &&
+          ball.y + ball.radius >= EXIT_Y &&
+          ball.y - ball.radius <= EXIT_Y + GOAL_POST_HEIGHT) {
+        // Determine which side of post was hit
+        if (ball.x < EXIT_X) {
+          // Hit left side of post
+          ball.x = leftPostX - ball.radius;
+          ball.vx = -Math.abs(ball.vx); // Bounce left
+        } else {
+          // Hit right side of post
+          ball.x = EXIT_X + ball.radius;
+          ball.vx = Math.abs(ball.vx); // Bounce right
+        }
+      }
+      
+      // Right goal post (vertical post)
+      if (ball.x - ball.radius <= rightPostX + GOAL_POST_WIDTH &&
+          ball.x + ball.radius >= rightPostX &&
+          ball.y + ball.radius >= EXIT_Y &&
+          ball.y - ball.radius <= EXIT_Y + GOAL_POST_HEIGHT) {
+        // Determine which side of post was hit
+        if (ball.x < rightPostX) {
+          // Hit left side of post
+          ball.x = rightPostX - ball.radius;
+          ball.vx = -Math.abs(ball.vx); // Bounce left
+        } else {
+          // Hit right side of post
+          ball.x = rightPostX + GOAL_POST_WIDTH + ball.radius;
+          ball.vx = Math.abs(ball.vx); // Bounce right
+        }
+      }
+      
+      // Crossbar (top horizontal bar of goal)
+      if (ball.y + ball.radius >= crossbarY &&
+          ball.y - ball.radius <= crossbarY + crossbarHeight &&
+          ball.x + ball.radius >= leftPostX &&
+          ball.x - ball.radius <= rightPostX + GOAL_POST_WIDTH &&
+          ball.vy < 0) { // Only bounce if moving upward
+        // Bounce vertically downward
+        ball.y = crossbarY + crossbarHeight + ball.radius;
+        ball.vy = Math.abs(ball.vy); // Bounce down
+      }
+
+      // Check win condition - ball enters goal (only through the opening, not posts)
+      const goalOpeningTop = EXIT_Y + GOAL_POST_WIDTH;
+      const goalOpeningBottom = goalOpeningTop + 15;
+      if (ball.y - ball.radius <= goalOpeningBottom &&
+          ball.y + ball.radius >= goalOpeningTop &&
           ball.x + ball.radius >= EXIT_X &&
           ball.x - ball.radius <= EXIT_X + EXIT_WIDTH) {
         gameState = 'won';
-        statusElement.textContent = 'You Win! Ball escaped!';
+        statusElement.textContent = 'You scored!';
         statusElement.className = 'status won';
+        goals += 1;
         score += 100;
         updateScore();
       }
@@ -363,18 +437,50 @@
         ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
       });
 
-      // Draw exit opening (top)
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(EXIT_X, EXIT_Y, EXIT_WIDTH, 15);
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(EXIT_X, EXIT_Y, EXIT_WIDTH, 15);
+      // Draw goal (top) - goal posts and net
+      const GOAL_POST_WIDTH = 8;
+      const GOAL_POST_HEIGHT = 30;
+      const GOAL_NET_DEPTH = 25;
       
-      // Draw exit label
+      // Draw goal posts (left and right)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(EXIT_X - GOAL_POST_WIDTH, EXIT_Y, GOAL_POST_WIDTH, GOAL_POST_HEIGHT);
+      ctx.fillRect(EXIT_X + EXIT_WIDTH, EXIT_Y, GOAL_POST_WIDTH, GOAL_POST_HEIGHT);
+      
+      // Draw crossbar
+      ctx.fillRect(EXIT_X - GOAL_POST_WIDTH, EXIT_Y, EXIT_WIDTH + GOAL_POST_WIDTH * 2, GOAL_POST_WIDTH);
+      
+      // Draw goal opening
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(EXIT_X, EXIT_Y + GOAL_POST_WIDTH, EXIT_WIDTH, 15);
+      
+      // Draw net (dashed lines for effect)
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      // Vertical net lines
+      for (let i = 0; i <= 4; i++) {
+        const x = EXIT_X + (EXIT_WIDTH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, EXIT_Y + GOAL_POST_WIDTH);
+        ctx.lineTo(x, EXIT_Y + GOAL_POST_WIDTH + GOAL_NET_DEPTH);
+        ctx.stroke();
+      }
+      // Horizontal net lines
+      for (let i = 1; i <= 3; i++) {
+        const y = EXIT_Y + GOAL_POST_WIDTH + (GOAL_NET_DEPTH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(EXIT_X, y);
+        ctx.lineTo(EXIT_X + EXIT_WIDTH, y);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      
+      // Draw goal label
       ctx.fillStyle = '#10b981';
-      ctx.font = 'bold 16px Arial';
+      ctx.font = 'bold 18px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('EXIT', EXIT_X + EXIT_WIDTH / 2, EXIT_Y - 5);
+      ctx.fillText('GOAL', EXIT_X + EXIT_WIDTH / 2, EXIT_Y - 8);
 
       // Draw pit
       ctx.fillStyle = '#7f1d1d';
