@@ -182,6 +182,37 @@
   #status.win {
     color: #16a34a;
     font-size: 1.5rem;
+    animation: celebrate 0.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes celebrate {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(1.1);
+    }
+  }
+
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: #ff6b6b;
+    pointer-events: none;
+    z-index: 1000;
+    animation: confetti-fall linear forwards;
+  }
+
+  @keyframes confetti-fall {
+    0% {
+      transform: translateY(-100vh) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(720deg);
+      opacity: 0;
+    }
   }
 
   .cell-size-3 { width: 60px; height: 60px; }
@@ -243,6 +274,7 @@
   let shapeIdCounter = 1;
   let previewRow = null;
   let previewCol = null;
+  let hasWon = false;
 
   // L-Shape definition (default)
   const defaultLShape = [[0,0], [1,0], [2,0], [2,1]];
@@ -511,6 +543,32 @@
     }
   }
 
+  function createConfetti() {
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe', '#00b894', '#00cec9'];
+    const confettiCount = 100;
+    
+    for (let i = 0; i < confettiCount; i++) {
+      setTimeout(() => {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+        confetti.style.width = (Math.random() * 10 + 8) + 'px';
+        confetti.style.height = (Math.random() * 10 + 8) + 'px';
+        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0%';
+        
+        document.body.appendChild(confetti);
+        
+        // Remove confetti after animation
+        setTimeout(() => {
+          confetti.remove();
+        }, 5000);
+      }, i * 10);
+    }
+  }
+
   function checkWin() {
     let emptyActiveCells = 0;
     for (let i = 0; i < boardState.length; i++) {
@@ -521,9 +579,14 @@
     }
     
     if (emptyActiveCells === 0) {
-      statusText.textContent = "🎉 Congratulations! You filled the entire grid!";
-      statusText.className = "win";
+      if (!hasWon) {
+        hasWon = true;
+        statusText.textContent = "🎉 Congratulations! You filled the entire grid!";
+        statusText.className = "win";
+        createConfetti();
+      }
     } else {
+      hasWon = false;
       statusText.textContent = `${emptyActiveCells} cell(s) remaining. Keep going!`;
       statusText.className = "";
     }
@@ -565,6 +628,7 @@
     currentFlipVertical = false;
     currentFlipHorizontal = false;
     shapeIdCounter = 1;
+    hasWon = false;
     statusText.textContent = "Click a cell to place the shape (click filled cells to remove)";
     statusText.className = "";
     renderBoard();
