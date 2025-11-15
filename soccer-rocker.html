@@ -237,7 +237,7 @@
         <span class="score player-score">You: <span id="playerScore">0</span></span>
         <span class="score opponent-score">Opponent: <span id="opponentScore">0</span></span>
       </div>
-      <div class="status" id="gameStatus">Arrow keys: move | A+Arrow: pass | S: shoot | D: steal | W: speed-up</div>
+      <div class="status" id="gameStatus">Arrow keys: move | A: pass (with ball) / switch player (defense) | S: shoot | D: steal | W: speed-up</div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -250,7 +250,7 @@
 
     <div class="instructions">
       <strong>How to Play:</strong> Use arrow keys to move your player (dribbles automatically when you have the ball). 
-      You control the player with the ball (or closest to it). Press <strong>A + Arrow</strong> to pass in that direction, <strong>S</strong> to shoot, <strong>D</strong> to steal from opponent, or <strong>W</strong> to speed-up (when available - look for the gold ring!). Score goals to win!
+      You control the player with the ball (or closest to it). On defense, press <strong>A</strong> to switch between players. With the ball, press <strong>A + Arrow</strong> to pass in that direction, <strong>S</strong> to shoot, <strong>D</strong> to steal from opponent, or <strong>W</strong> to speed-up (when available - look for the gold ring!). Score goals to win!
     </div>
   </div>
 
@@ -313,7 +313,8 @@
       opponentLastPassTime: 0, // Track when opponent last passed
       closestDefender: null, // Track current closest defender to player with ball
       closestDefenderDistance: Infinity, // Distance of current closest defender
-      closestDefenderSwitchCooldown: 0 // Cooldown before switching closest defender
+      closestDefenderSwitchCooldown: 0, // Cooldown before switching closest defender
+      manualPlayerSwitch: false // If true, auto-switch to closest player is disabled
     };
 
     // Initialize teams
@@ -347,6 +348,11 @@
 
     // Find which player should be controlled
     function updateControlledPlayer() {
+      // If manual switching is enabled, don't auto-switch
+      if (gameState.manualPlayerSwitch) {
+        return;
+      }
+      
       let closestPlayer = null;
       let minDist = Infinity;
 
@@ -362,6 +368,16 @@
       });
 
       gameState.controlledPlayer = closestPlayer;
+    }
+    
+    // Switch to next player in team
+    function switchToNextPlayer() {
+      if (!gameState.controlledPlayer || gameState.playerTeam.length <= 1) return;
+      
+      const currentIndex = gameState.playerTeam.indexOf(gameState.controlledPlayer);
+      const nextIndex = (currentIndex + 1) % gameState.playerTeam.length;
+      gameState.controlledPlayer = gameState.playerTeam[nextIndex];
+      gameState.manualPlayerSwitch = true; // Enable manual switching mode
     }
     
     // Check if a player actually has the ball
@@ -744,8 +760,10 @@
         player.hasBall = (player === ballPossession);
       });
       
-      // If controlled player has ball, keep it close
+      // If controlled player has ball, keep it close and re-enable auto-switch
       if (ballPossession === gameState.controlledPlayer && gameState.controlledPlayer) {
+        // Re-enable auto-switch when controlled player gets the ball
+        gameState.manualPlayerSwitch = false;
         const dx = gameState.ball.x - gameState.controlledPlayer.x;
         const dy = gameState.ball.y - gameState.controlledPlayer.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1294,6 +1312,7 @@
             
             // Very permissive: accept any teammate that's not directly behind (dotProduct > -0.5)
             // This means teammates within ~120 degrees of the direction
+            // But always consider teammates, even if not perfectly aligned
             if (dotProduct > -0.5) {
               // Score heavily favors alignment with direction
               // Slight bonus for closer teammates when alignment is similar
@@ -1305,16 +1324,25 @@
                 bestScore = score;
                 targetTeammate = teammate;
               }
+            } else if (dotProduct > -0.8) {
+              // Even more permissive: accept teammates within ~140 degrees (almost any direction except directly behind)
+              // This ensures we can always find a teammate if one exists
+              const alignmentScore = (dotProduct + 0.8) / 1.8; // Normalize to 0-1 range
+              const distanceBonus = 1 / (1 + dist * 0.01);
+              const score = alignmentScore * 0.7 + distanceBonus * 0.3;
+              
+              if (score > bestScore) {
+                bestScore = score;
+                targetTeammate = teammate;
+              }
             }
           }
         });
       } else {
         // No direction specified - find closest teammate (not offside)
+        // If all teammates are offside, still find the closest one (they'll move onside)
         gameState.playerTeam.forEach(teammate => {
           if (teammate === gameState.controlledPlayer) return;
-          
-          // Skip offside teammates
-          if (isOffside(teammate)) return;
           
           const dx = teammate.x - gameState.ball.x;
           const dy = teammate.y - gameState.ball.y;
@@ -1322,7 +1350,9 @@
           
           if (dist > 0) {
             // Score based on distance (closer is better)
-            const score = 1 / (1 + dist * 0.01);
+            // Penalize offside teammates slightly, but don't exclude them completely
+            const offsidePenalty = isOffside(teammate) ? 0.5 : 1.0;
+            const score = (1 / (1 + dist * 0.01)) * offsidePenalty;
             
             if (score > bestScore) {
               bestScore = score;
@@ -1332,6 +1362,8 @@
         });
       }
 
+      // Always pass - either to teammate or in direction
+      let passAngle;
       if (targetTeammate) {
         // Pass to teammate with error based on distance
         const dx = targetTeammate.x - gameState.ball.x;
@@ -1345,47 +1377,32 @@
         const errorFactor = Math.min(dist / 200, 1); // Scale error based on distance (200px = max error)
         const error = (Math.random() - 0.5) * 2 * maxError * errorFactor;
         
-        const passAngle = angle + error;
-        
-        // Move ball away from player immediately to prevent re-possession
-        // Use larger push distance to ensure ball is out of possession range
-        const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 15;
-        gameState.ball.x = gameState.controlledPlayer.x + Math.cos(passAngle) * pushDistance;
-        gameState.ball.y = gameState.controlledPlayer.y + Math.sin(passAngle) * pushDistance;
-        
-        // Set ball velocity
-        gameState.ball.vx = Math.cos(passAngle) * PASS_POWER;
-        gameState.ball.vy = Math.sin(passAngle) * PASS_POWER;
-        
-        // Clear player's ball possession
-        gameState.controlledPlayer.hasBall = false;
-        gameState.actionCooldown = 30;
+        passAngle = angle + error;
       } else {
-        // No teammate found - pass in direction or to closest teammate
-        let passAngle;
+        // No teammate found - pass in direction or forward
         if (directionX !== 0 || directionY !== 0) {
           // Directional pass
           passAngle = Math.atan2(directionY, directionX);
         } else {
-          // No direction - this shouldn't happen if we found a teammate above
-          // But just in case, pass forward
-          passAngle = Math.atan2(0, 1); // Right
+          // No direction specified and no teammate found - pass forward (toward opponent goal)
+          passAngle = Math.atan2(0, -1); // Left (toward opponent goal for player team)
         }
-        
-        // Move ball away from player immediately to prevent re-possession
-        // Use larger push distance to ensure ball is out of possession range
-        const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 15;
-        gameState.ball.x = gameState.controlledPlayer.x + Math.cos(passAngle) * pushDistance;
-        gameState.ball.y = gameState.controlledPlayer.y + Math.sin(passAngle) * pushDistance;
-        
-        // Set ball velocity
-        gameState.ball.vx = Math.cos(passAngle) * PASS_POWER;
-        gameState.ball.vy = Math.sin(passAngle) * PASS_POWER;
-        
-        // Clear player's ball possession
-        gameState.controlledPlayer.hasBall = false;
-        gameState.actionCooldown = 30;
       }
+      
+      // Always execute the pass
+      // Move ball away from player immediately to prevent re-possession
+      // Use larger push distance to ensure ball is out of possession range
+      const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 15;
+      gameState.ball.x = gameState.controlledPlayer.x + Math.cos(passAngle) * pushDistance;
+      gameState.ball.y = gameState.controlledPlayer.y + Math.sin(passAngle) * pushDistance;
+      
+      // Set ball velocity
+      gameState.ball.vx = Math.cos(passAngle) * PASS_POWER;
+      gameState.ball.vy = Math.sin(passAngle) * PASS_POWER;
+      
+      // Clear player's ball possession
+      gameState.controlledPlayer.hasBall = false;
+      gameState.actionCooldown = 30;
     }
 
     function steal() {
@@ -1615,14 +1632,23 @@
         gameState.keys['A'] = true;
         e.preventDefault();
         
-        // Check if arrow key is also pressed for directional pass
-        const passDir = checkPassCombination();
-        if (passDir) {
-          // Directional pass (A + Arrow)
-          pass(passDir.dirX, passDir.dirY);
+        // Check if player has ball - if yes, pass; if no, switch player
+        const hasBall = gameState.controlledPlayer && playerHasBall(gameState.controlledPlayer);
+        
+        if (hasBall) {
+          // Player has ball - pass behavior
+          // Check if arrow key is also pressed for directional pass
+          const passDir = checkPassCombination();
+          if (passDir) {
+            // Directional pass (A + Arrow)
+            pass(passDir.dirX, passDir.dirY);
+          } else {
+            // Just A pressed - pass to closest teammate
+            pass(0, 0);
+          }
         } else {
-          // Just A pressed - pass to closest teammate
-          pass(0, 0);
+          // Player doesn't have ball - switch to next player
+          switchToNextPlayer();
         }
         return;
       }
