@@ -360,6 +360,17 @@
 
     // Keyboard controls
     document.addEventListener('keydown', (e) => {
+      // Prevent arrow keys from scrolling the page
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || 
+          e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+      }
+      
+      // Ignore up and down arrow keys
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        return;
+      }
+      
       keys[e.key] = true;
       
       // Spacebar to reset after win or loss
@@ -370,6 +381,11 @@
     });
 
     document.addEventListener('keyup', (e) => {
+      // Ignore up and down arrow keys
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        return;
+      }
+      
       keys[e.key] = false;
     });
 
