@@ -288,6 +288,8 @@
     const DRIBBLE_POWER = 1.5;
     const SHOOT_POWER = 6;
     const STEAL_RANGE = 30;
+    const DEFENDER_SWITCH_HYSTERESIS = 15; // Only switch if new defender is this much closer
+    const DEFENDER_SWITCH_COOLDOWN = 30; // Frames before can switch again
 
     // Game state
     let gameState = {
@@ -305,7 +307,10 @@
       keys: {},
       actionCooldown: 0,
       opponentPressureTime: 0, // Track how long opponent has been under pressure
-      opponentLastPassTime: 0 // Track when opponent last passed
+      opponentLastPassTime: 0, // Track when opponent last passed
+      closestDefender: null, // Track current closest defender to player with ball
+      closestDefenderDistance: Infinity, // Distance of current closest defender
+      closestDefenderSwitchCooldown: 0 // Cooldown before switching closest defender
     };
 
     // Initialize teams
@@ -873,19 +878,63 @@
       const playerWithBall = gameState.playerTeam.find(p => p.hasBall);
       let closestOpponentToPlayer = null;
       let minDistToPlayer = Infinity;
+      let minDistToPlayerSq = Infinity;
       
-      // Find closest opponent to player with ball
+      // Update cooldown
+      if (gameState.closestDefenderSwitchCooldown > 0) {
+        gameState.closestDefenderSwitchCooldown--;
+      }
+      
+      // Find closest opponent to player with ball (with debounce/hysteresis)
       if (playerWithBall) {
+        // Find closest opponent (using squared distances for optimization)
         gameState.opponentTeam.forEach(opponent => {
           if (opponent.hasBall) return; // Skip if opponent has ball
           const dx = opponent.x - playerWithBall.x;
           const dy = opponent.y - playerWithBall.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < minDistToPlayer) {
-            minDistToPlayer = dist;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < minDistToPlayerSq) {
+            minDistToPlayerSq = distSq;
+            minDistToPlayer = Math.sqrt(distSq);
             closestOpponentToPlayer = opponent;
           }
         });
+        
+        // Only switch closest defender if:
+        // 1. Cooldown has expired
+        // 2. New defender is significantly closer (hysteresis) OR no current defender
+        // 3. Current defender is no longer valid (has ball, etc.)
+        const canSwitch = gameState.closestDefenderSwitchCooldown === 0;
+        const currentDefenderValid = gameState.closestDefender && 
+                                     !gameState.closestDefender.hasBall &&
+                                     gameState.closestDefenderDistance < Infinity;
+        const newDefenderMuchCloser = closestOpponentToPlayer && 
+                                      (minDistToPlayer < gameState.closestDefenderDistance - DEFENDER_SWITCH_HYSTERESIS);
+        const shouldSwitch = canSwitch && closestOpponentToPlayer && (
+          !currentDefenderValid || // No valid current defender
+          newDefenderMuchCloser || // New one is significantly closer
+          gameState.closestDefender === closestOpponentToPlayer // Same defender, just update distance
+        );
+        
+        if (shouldSwitch) {
+          // Only switch if it's a different defender
+          if (gameState.closestDefender !== closestOpponentToPlayer) {
+            gameState.closestDefender = closestOpponentToPlayer;
+            gameState.closestDefenderSwitchCooldown = DEFENDER_SWITCH_COOLDOWN;
+          }
+          gameState.closestDefenderDistance = minDistToPlayer;
+        } else if (!closestOpponentToPlayer) {
+          // No valid defender found, reset
+          gameState.closestDefender = null;
+          gameState.closestDefenderDistance = Infinity;
+        }
+        // Use the debounced closest defender
+        closestOpponentToPlayer = gameState.closestDefender;
+      } else {
+        // No player with ball, reset
+        gameState.closestDefender = null;
+        gameState.closestDefenderDistance = Infinity;
+        gameState.closestDefenderSwitchCooldown = 0;
       }
       
       gameState.opponentTeam.forEach(player => {
