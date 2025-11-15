@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Games Collection</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .container {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    padding: 40px;
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 3rem;
+    color: #333;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 40px;
+  }
+
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+  }
+
+  .game-card {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 30px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .game-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border-color: #667eea;
+    background: white;
+  }
+
+  .game-icon {
+    font-size: 4rem;
+    margin-bottom: 15px;
+  }
+
+  .game-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  .game-description {
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  .game-card.tic-tac-toe {
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  }
+
+  .game-card.tic-tac-toe:hover {
+    background: linear-gradient(135deg, #c7d2fe 0%, #a5b4fc 100%);
+  }
+
+  .game-card.tiling {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  }
+
+  .game-card.tiling:hover {
+    background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  }
+
+  @media (max-width: 600px) {
+    h1 {
+      font-size: 2rem;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .games-grid {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Games Collection</h1>
+    <p class="subtitle">Choose a game to play</p>
+    
+    <div class="games-grid">
+      <a href="tictactoe.html" class="game-card tic-tac-toe">
+        <div class="game-icon">⭕❌</div>
+        <div class="game-title">Tic Tac Toe</div>
+        <div class="game-description">
+          Classic tic-tac-toe with customizable grid sizes, win conditions, and win probability visualization.
+        </div>
+      </a>
+      
+      <a href="tiling.html" class="game-card tiling">
+        <div class="game-icon">🧩</div>
+        <div class="game-title">Tiling Puzzle</div>
+        <div class="game-description">
+          Place L-shapes on a grid to completely fill it. Rotate and flip shapes to solve the puzzle.
+        </div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
+

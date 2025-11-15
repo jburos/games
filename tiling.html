@@ -203,7 +203,8 @@
   <div id="rotationControls">
     <button id="rotateLeftBtn">↺ Rotate Left</button>
     <button id="rotateRightBtn">↻ Rotate Right</button>
-    <button id="flipBtn">↕ Flip</button>
+    <button id="flipVerticalBtn">↕ Flip Vertical</button>
+    <button id="flipHorizontalBtn">↔ Flip Horizontal</button>
   </div>
   <button id="resetBtn">Reset</button>
 </div>
@@ -225,13 +226,15 @@
   const gridSizeSelect = document.getElementById("gridSizeSelect");
   const rotateLeftBtn = document.getElementById("rotateLeftBtn");
   const rotateRightBtn = document.getElementById("rotateRightBtn");
-  const flipBtn = document.getElementById("flipBtn");
+  const flipVerticalBtn = document.getElementById("flipVerticalBtn");
+  const flipHorizontalBtn = document.getElementById("flipHorizontalBtn");
   const shapePreviewGrid = document.getElementById("shapePreviewGrid");
 
   let gridSize = 4;
   let boardState = [];
   let currentRotation = 0;
-  let currentFlip = false;
+  let currentFlipVertical = false;
+  let currentFlipHorizontal = false;
   let shapeIdCounter = 1;
   let previewRow = null;
   let previewCol = null;
@@ -269,8 +272,11 @@
   function getCurrentShape() {
     let shape = normalizeShape(lShape);
     shape = rotateShape(shape, currentRotation);
-    if (currentFlip) {
+    if (currentFlipVertical) {
       shape = flipShape(shape, false);
+    }
+    if (currentFlipHorizontal) {
+      shape = flipShape(shape, true);
     }
     return shape;
   }
@@ -499,7 +505,8 @@
     gridSize = parseInt(gridSizeSelect.value);
     boardState = Array(gridSize * gridSize).fill(0);
     currentRotation = 0;
-    currentFlip = false;
+    currentFlipVertical = false;
+    currentFlipHorizontal = false;
     shapeIdCounter = 1;
     statusText.textContent = "Click a cell to place the L-shape (click filled cells to remove)";
     statusText.className = "";
@@ -523,8 +530,16 @@
     }
   }
 
-  function flip() {
-    currentFlip = !currentFlip;
+  function flipVertical() {
+    currentFlipVertical = !currentFlipVertical;
+    renderShapePreview();
+    if (previewRow !== null && previewCol !== null) {
+      showPreview(previewRow, previewCol);
+    }
+  }
+
+  function flipHorizontal() {
+    currentFlipHorizontal = !currentFlipHorizontal;
     renderShapePreview();
     if (previewRow !== null && previewCol !== null) {
       showPreview(previewRow, previewCol);
@@ -535,7 +550,8 @@
   gridSizeSelect.addEventListener("change", resetGame);
   rotateLeftBtn.addEventListener("click", rotateLeft);
   rotateRightBtn.addEventListener("click", rotateRight);
-  flipBtn.addEventListener("click", flip);
+  flipVerticalBtn.addEventListener("click", flipVertical);
+  flipHorizontalBtn.addEventListener("click", flipHorizontal);
 
   // Initialize
   resetGame();
