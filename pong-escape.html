@@ -286,33 +286,57 @@
     // Walls (boundaries) - will be recalculated on resize
     let walls = [];
 
+    // Cache container reference to avoid repeated DOM queries
+    const container = document.querySelector('.container');
+    
     // Function to resize canvas and recalculate dimensions
     function resizeCanvas() {
-      const container = document.querySelector('.container');
       const containerRect = container.getBoundingClientRect();
       const availableWidth = containerRect.width - 40; // Account for padding
       const availableHeight = window.innerHeight - 200; // Account for UI elements
       
       // Calculate canvas size maintaining 4:3 aspect ratio
+      // Limit maximum size for performance
+      const MAX_WIDTH = 800;
+      const MAX_HEIGHT = 600;
       const aspectRatio = BASE_WIDTH / BASE_HEIGHT;
-      let newWidth = Math.min(availableWidth, BASE_WIDTH);
+      let newWidth = Math.min(availableWidth, MAX_WIDTH);
       let newHeight = newWidth / aspectRatio;
       
       // If height is too large, scale based on height instead
-      if (newHeight > availableHeight) {
-        newHeight = Math.min(availableHeight, BASE_HEIGHT);
+      if (newHeight > availableHeight || newHeight > MAX_HEIGHT) {
+        newHeight = Math.min(availableHeight, MAX_HEIGHT);
         newWidth = newHeight * aspectRatio;
       }
+      
+      // Store old dimensions before updating
+      const oldWidth = canvasWidth || BASE_WIDTH;
+      const oldHeight = canvasHeight || BASE_HEIGHT;
+      const oldScale = scale || 1;
       
       canvasWidth = Math.floor(newWidth);
       canvasHeight = Math.floor(newHeight);
       scale = canvasWidth / BASE_WIDTH;
       
-      // Set canvas size
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
+      // Handle high-DPI displays - but limit for performance
+      const dpr = window.devicePixelRatio || 1;
+      // For performance, use 1x DPR on high-res screens (sacrifice some sharpness for speed)
+      // Or cap at 1.5x for a balance
+      const effectiveDPR = dpr > 1.5 ? 1.5 : 1;
+      
+      // Set canvas size (internal resolution)
+      canvas.width = canvasWidth * effectiveDPR;
+      canvas.height = canvasHeight * effectiveDPR;
+      
+      // Set canvas display size (CSS)
       canvas.style.width = canvasWidth + 'px';
       canvas.style.height = canvasHeight + 'px';
+      
+      // Reset and scale the context to handle high-DPI
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+      if (effectiveDPR !== 1) {
+        ctx.scale(effectiveDPR, effectiveDPR);
+      }
       
       // Recalculate game dimensions based on scale
       PIT_WIDTH = canvasWidth - 10 * scale;
@@ -329,12 +353,12 @@
       if (ball.radius === 0) {
         initializeBall();
       } else {
-        // Scale existing ball position
-        ball.x = (ball.x / (canvas.width || BASE_WIDTH)) * canvasWidth;
-        ball.y = (ball.y / (canvas.height || BASE_HEIGHT)) * canvasHeight;
+        // Scale existing ball position using old dimensions
+        ball.x = (ball.x / oldWidth) * canvasWidth;
+        ball.y = (ball.y / oldHeight) * canvasHeight;
         ball.radius = BALL_RADIUS;
-        ball.vx = ball.vx > 0 ? Math.abs(ball.vx) * scale : -Math.abs(ball.vx) * scale;
-        ball.vy = ball.vy > 0 ? Math.abs(ball.vy) * scale : -Math.abs(ball.vy) * scale;
+        ball.vx = (ball.vx / oldScale) * scale;
+        ball.vy = (ball.vy / oldScale) * scale;
       }
       
       // Update paddle
@@ -639,26 +663,25 @@
       ctx.fillStyle = '#0f172a';
       ctx.fillRect(EXIT_X, EXIT_Y + GOAL_POST_WIDTH, EXIT_WIDTH, 15 * scale);
       
-      // Draw net (dashed lines for effect)
+      // Draw simplified net (fewer lines for better performance)
       ctx.strokeStyle = '#10b981';
       ctx.lineWidth = 2 * scale;
       ctx.setLineDash([3 * scale, 3 * scale]);
-      // Vertical net lines
-      for (let i = 0; i <= 4; i++) {
-        const x = EXIT_X + (EXIT_WIDTH / 4) * i;
-        ctx.beginPath();
+      ctx.beginPath();
+      // Reduced net lines for performance
+      // Vertical net lines (fewer)
+      for (let i = 0; i <= 2; i++) {
+        const x = EXIT_X + (EXIT_WIDTH / 2) * i;
         ctx.moveTo(x, EXIT_Y + GOAL_POST_WIDTH);
         ctx.lineTo(x, EXIT_Y + GOAL_POST_WIDTH + GOAL_NET_DEPTH);
-        ctx.stroke();
       }
-      // Horizontal net lines
-      for (let i = 1; i <= 3; i++) {
-        const y = EXIT_Y + GOAL_POST_WIDTH + (GOAL_NET_DEPTH / 4) * i;
-        ctx.beginPath();
+      // Horizontal net lines (fewer)
+      for (let i = 1; i <= 2; i++) {
+        const y = EXIT_Y + GOAL_POST_WIDTH + (GOAL_NET_DEPTH / 3) * i;
         ctx.moveTo(EXIT_X, y);
         ctx.lineTo(EXIT_X + EXIT_WIDTH, y);
-        ctx.stroke();
       }
+      ctx.stroke();
       ctx.setLineDash([]);
 
       // Draw pit
@@ -693,12 +716,7 @@
       ctx.lineWidth = 2 * scale;
       ctx.stroke();
 
-      // Draw ball trail (visual effect)
-      ctx.globalAlpha = 0.3;
-      ctx.beginPath();
-      ctx.arc(ball.x - ball.vx * 2, ball.y - ball.vy * 2, ball.radius * 0.7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
+      // Ball trail removed for better performance
 
       // Draw game-over overlay if game is won or lost
       if (gameState === 'won' || gameState === 'lost') {
@@ -747,23 +765,37 @@
       }
     }
 
+    let frameCount = 0;
     function gameLoop() {
+      // Only update physics every frame, but optimize drawing
       updatePaddle();
       updateBall();
+      
+      // Draw every frame (required for smooth animation)
       draw();
+      
       requestAnimationFrame(gameLoop);
     }
 
     // Initialize canvas size
     resizeCanvas();
     
-    // Handle window resize
+    // Handle window resize - increased debounce time for better performance
     let resizeTimeout;
+    let lastWidth = 0;
+    let lastHeight = 0;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(() => {
-        resizeCanvas();
-      }, 100);
+        const currentWidth = window.innerWidth;
+        const currentHeight = window.innerHeight;
+        // Only resize if there's a meaningful change
+        if (Math.abs(currentWidth - lastWidth) > 10 || Math.abs(currentHeight - lastHeight) > 10) {
+          lastWidth = currentWidth;
+          lastHeight = currentHeight;
+          resizeCanvas();
+        }
+      }, 250);
     });
 
     // Start game loop
