@@ -1066,6 +1066,11 @@
       // Add some randomness
       const randomAngle = angle + (Math.random() - 0.5) * 0.3;
       
+      // Move ball away from player immediately to prevent re-possession
+      const pushDistance = PLAYER_RADIUS + BALL_RADIUS + 5;
+      gameState.ball.x = gameState.controlledPlayer.x + Math.cos(randomAngle) * pushDistance;
+      gameState.ball.y = gameState.controlledPlayer.y + Math.sin(randomAngle) * pushDistance;
+      
       gameState.ball.vx = Math.cos(randomAngle) * SHOOT_POWER;
       gameState.ball.vy = Math.sin(randomAngle) * SHOOT_POWER;
       gameState.controlledPlayer.hasBall = false;
