@@ -247,104 +247,6 @@
       display: none;
     }
   }
-
-  /* Start Prompt Modal */
-  #startPrompt {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  #startPrompt.hidden {
-    display: none;
-  }
-
-  .prompt-box {
-    background: #1e293b;
-    border-radius: 15px;
-    padding: 30px;
-    max-width: 500px;
-    width: 90%;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    border: 2px solid #3b82f6;
-  }
-
-  .prompt-box h2 {
-    color: #3b82f6;
-    margin-bottom: 15px;
-    font-size: clamp(1.5rem, 4vw, 2rem);
-  }
-
-  .prompt-box p {
-    color: #cbd5e1;
-    margin-bottom: 20px;
-    font-size: clamp(1rem, 2.5vw, 1.2rem);
-    line-height: 1.6;
-  }
-
-  .difficulty-display {
-    background: #0f172a;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 20px 0;
-    border: 2px solid #8b5cf6;
-  }
-
-  .difficulty-display .difficulty-name {
-    font-size: clamp(1.2rem, 3vw, 1.5rem);
-    font-weight: bold;
-    color: #8b5cf6;
-    margin-bottom: 5px;
-  }
-
-  .difficulty-display .difficulty-blocks {
-    font-size: clamp(0.9rem, 2vw, 1rem);
-    color: #cbd5e1;
-  }
-
-  .prompt-buttons {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 25px;
-  }
-
-  .prompt-buttons button {
-    padding: 12px 24px;
-    font-size: clamp(0.9rem, 2vw, 1rem);
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: none;
-  }
-
-  .prompt-buttons button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
-  }
-
-  .prompt-buttons button:active {
-    transform: translateY(0);
-  }
-
-  #startGameBtn {
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-    color: white;
-  }
-
-  #changeDifficultyBtn {
-    background: #475569;
-    color: white;
-  }
 </style>
 </head>
 <body>
@@ -366,25 +268,6 @@
 
     <div class="canvas-wrapper">
       <canvas id="gameCanvas"></canvas>
-    </div>
-
-    <!-- Start Prompt Modal -->
-    <div id="startPrompt">
-      <div class="prompt-box">
-        <h2>🎮 Ready to Play?</h2>
-        <p>You've selected:</p>
-        <div class="difficulty-display">
-          <div class="difficulty-name" id="promptDifficultyName">Easy</div>
-          <div class="difficulty-blocks" id="promptDifficultyBlocks">0 blocks</div>
-        </div>
-        <p style="font-size: clamp(0.85rem, 2vw, 1rem); color: #94a3b8;">
-          Guide the ball to the goal while avoiding obstacles!
-        </p>
-        <div class="prompt-buttons">
-          <button id="startGameBtn">Start Game</button>
-          <button id="changeDifficultyBtn">Change Difficulty</button>
-        </div>
-      </div>
     </div>
 
     <div class="controls">
@@ -430,15 +313,8 @@
     let score = 0;
     let wins = 0;
     let losses = 0;
-    let gameState = 'notStarted'; // 'notStarted', 'playing', 'won', 'lost'
+    let gameState = 'playing'; // 'playing', 'won', 'lost'
     let keys = {};
-    
-    // Start prompt elements
-    const startPrompt = document.getElementById('startPrompt');
-    const startGameBtn = document.getElementById('startGameBtn');
-    const changeDifficultyBtn = document.getElementById('changeDifficultyBtn');
-    const promptDifficultyName = document.getElementById('promptDifficultyName');
-    const promptDifficultyBlocks = document.getElementById('promptDifficultyBlocks');
 
     // Base game dimensions (aspect ratio 4:3)
     const BASE_WIDTH = 800;
@@ -750,62 +626,13 @@
       }
     }
     
-    // Function to get difficulty name
-    function getDifficultyName(numBlocks) {
-      const names = {
-        0: 'Easy',
-        3: 'Medium',
-        5: 'Hard',
-        8: 'Very Hard',
-        12: 'Extreme'
-      };
-      return names[numBlocks] || 'Custom';
-    }
-    
-    // Function to update prompt display
-    function updatePromptDisplay() {
-      const numBlocks = parseInt(difficultySelect.value);
-      promptDifficultyName.textContent = getDifficultyName(numBlocks);
-      promptDifficultyBlocks.textContent = `${numBlocks} block${numBlocks !== 1 ? 's' : ''}`;
-    }
-    
-    // Function to show start prompt
-    function showStartPrompt() {
-      updatePromptDisplay();
-      startPrompt.classList.remove('hidden');
-      gameState = 'notStarted';
-    }
-    
-    // Function to hide start prompt and start game
-    function hideStartPrompt() {
-      startPrompt.classList.add('hidden');
-      const numBlocks = parseInt(difficultySelect.value);
-      generateBlocks(numBlocks);
-      gameState = 'playing';
-      initializeBall();
-      statusElement.textContent = 'Use arrow keys to move paddle';
-      statusElement.className = 'status';
-    }
-    
-    // Start game button
-    startGameBtn.addEventListener('click', hideStartPrompt);
-    
-    // Change difficulty button
-    changeDifficultyBtn.addEventListener('click', () => {
-      startPrompt.classList.add('hidden');
-      // Focus on difficulty selector
-      difficultySelect.focus();
-    });
-    
     // Difficulty selector
     difficultySelect.addEventListener('change', (e) => {
       const newNumBlocks = parseInt(e.target.value);
+      generateBlocks(newNumBlocks);
       if (gameState === 'playing') {
-        // If game is in progress, show prompt to confirm change
-        showStartPrompt();
-      } else {
-        // If not playing, just update the prompt display
-        updatePromptDisplay();
+        // If game is in progress, restart to apply new difficulty
+        restartGame();
       }
     });
 
@@ -813,9 +640,15 @@
     restartBtn.addEventListener('click', restartGame);
 
     function restartGame() {
-      // Show prompt before restarting
-      showStartPrompt();
       score = 0;
+      gameState = 'playing';
+      initializeBall();
+      paddle.x = PIT_X + (PIT_WIDTH - PADDLE_WIDTH) / 2;
+      // Regenerate blocks with current difficulty setting
+      const currentDifficulty = parseInt(difficultySelect.value);
+      generateBlocks(currentDifficulty);
+      statusElement.textContent = 'Use arrow keys to move paddle';
+      statusElement.className = 'status';
       updateScore();
     }
 
@@ -1330,10 +1163,10 @@
     // Initialize canvas size
     resizeCanvas();
     
-    // Show start prompt on page load
+    // Initialize blocks with default difficulty (after canvas is resized)
     setTimeout(() => {
-      showStartPrompt();
-    }, 100);
+      generateBlocks(parseInt(difficultySelect.value));
+    }, 0);
     
     // Handle window resize - increased debounce time for better performance
     let resizeTimeout;
