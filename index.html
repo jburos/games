@@ -78,6 +78,13 @@
       "name": "Soccer Rocker",
       "description": "Top-down soccer game where you control your team. Pass, dribble, and shoot to score goals",
       "url": "https://games.example.com/soccer-rocker.html"
+    },
+    {
+      "@type": "Game",
+      "position": 6,
+      "name": "Soccer Rocker 2P",
+      "description": "Two-player multiplayer soccer game. Play with a friend on different devices using a room code",
+      "url": "https://games.example.com/soccer-rocker-2p.html"
     }
   ]
 }
@@ -213,6 +220,14 @@
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
   }
 
+  .game-card.soccer-rocker-2p {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .game-card.soccer-rocker-2p:hover {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  }
+
   @media (max-width: 600px) {
     h1 {
       font-size: 2rem;
@@ -275,8 +290,45 @@
         </div>
       </a>
       
+      <a href="soccer-rocker-2p.html" class="game-card soccer-rocker-2p" id="soccer2pLink">
+        <div class="game-icon">⚽⚽</div>
+        <div class="game-title">Soccer Rocker 2P</div>
+        <div class="game-description">
+          Two-player multiplayer! Play with a friend on different devices. Create or join a room to start playing.
+        </div>
+      </a>
+      
     </div>
   </div>
+  
+  <script>
+    // Update Soccer Rocker 2P link with full URL and IP parameter
+    (function() {
+      const link = document.getElementById('soccer2pLink');
+      if (!link) return;
+      
+      // Get current hostname (will be the server IP or domain)
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol;
+      const port = window.location.port ? ':' + window.location.port : '';
+      
+      // Build full URL - if hostname is localhost, keep relative, otherwise use full URL
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // For localhost, use relative path but add IP parameter if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const ip = urlParams.get('ip');
+        if (ip) {
+          link.href = `soccer-rocker-2p.html?ip=${ip}`;
+        } else {
+          link.href = 'soccer-rocker-2p.html';
+        }
+      } else {
+        // For external access, use full URL with hostname as IP parameter
+        const fullUrl = `${protocol}//${hostname}${port}/soccer-rocker-2p.html?ip=${hostname}`;
+        link.href = fullUrl;
+      }
+    })();
+  </script>
 </body>
 </html>
 

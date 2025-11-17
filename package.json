@@ -1,0 +1,23 @@
+{
+  "name": "soccer-rocker-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for Soccer Rocker 2P multiplayer game",
+  "main": "soccer-server.js",
+  "scripts": {
+    "start": "node soccer-server.js",
+    "serve": "node serve.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "soccer",
+    "game",
+    "multiplayer",
+    "websocket"
+  ]
+}
+

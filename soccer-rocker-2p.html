@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Soccer Rocker 2P - Two Player Multiplayer | Free Kids Game</title>
+<meta name="description" content="Play Soccer Rocker with a friend! Two-player multiplayer soccer game. Connect with a room code and play on different devices!" />
+<script src="config.js"></script>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0f5132 0%, #198754 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: white;
+  }
+
+  .container {
+    background: #1e293b;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-width: 95vw;
+    width: 100%;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .connection-screen {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .connection-screen h2 {
+    margin-bottom: 20px;
+    color: #3b82f6;
+  }
+
+  .connection-input {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .connection-input input {
+    padding: 12px 16px;
+    font-size: 1.1rem;
+    border: 2px solid #334155;
+    border-radius: 8px;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+    width: 200px;
+  }
+
+  .connection-input input:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+
+  .connection-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+  }
+
+  .btn-primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    background: #10b981;
+    color: white;
+  }
+
+  .btn-secondary:hover {
+    background: #059669;
+    transform: translateY(-2px);
+  }
+
+  .status-message {
+    margin-top: 15px;
+    padding: 10px;
+    background: #334155;
+    border-radius: 8px;
+    min-height: 40px;
+  }
+
+  .game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: #0f172a;
+    border-radius: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .score-display {
+    display: flex;
+    gap: clamp(10px, 2vw, 20px);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .score {
+    font-size: clamp(1rem, 2vw, 1.5rem);
+    font-weight: bold;
+  }
+
+  .player-score {
+    color: #3b82f6;
+  }
+
+  .opponent-score {
+    color: #ef4444;
+  }
+
+  .status {
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: #334155;
+  }
+
+  #gameCanvas {
+    display: block;
+    margin: 0 auto;
+    border: 3px solid #334155;
+    border-radius: 10px;
+    background: #0f172a;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 100%;
+    height: auto;
+    width: 100%;
+    max-height: 70vh;
+  }
+
+  .instructions {
+    margin-top: 15px;
+    padding: 15px;
+    background: #0f172a;
+    border-radius: 10px;
+    font-size: clamp(0.85rem, 1.5vw, 1rem);
+    line-height: 1.6;
+    text-align: center;
+  }
+
+  .instructions strong {
+    color: #3b82f6;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚽ Soccer Rocker 2P</h1>
+    
+    <div id="connectionScreen" class="connection-screen">
+      <h2>Connect to Play</h2>
+      <div class="connection-input">
+        <input type="text" id="roomCodeInput" placeholder="Room Code (e.g., happy-cat)" style="text-transform: lowercase;">
+      </div>
+      <div class="connection-buttons">
+        <button class="btn btn-primary" id="createBtn">Create Room</button>
+        <button class="btn btn-secondary" id="joinBtn">Join Room</button>
+      </div>
+      <div class="status-message" id="connectionStatus">Enter a room code (two words, like "happy-cat") or create a new room to start playing!</div>
+    </div>
+
+    <div id="gameScreen" class="hidden">
+      <div class="game-info">
+        <div class="score-display">
+          <span class="score player-score">Player 1: <span id="playerScore">0</span></span>
+          <span class="score opponent-score">Player 2: <span id="opponentScore">0</span></span>
+        </div>
+        <div class="status" id="gameStatus">Connecting...</div>
+      </div>
+
+      <canvas id="gameCanvas"></canvas>
+
+      <div class="instructions">
+        <div id="player1Instructions" class="hidden">
+          <strong>Player 1 (Blue Team):</strong> Arrow keys: move | A: pass/switch | S: shoot | D: steal | W: speed-up
+        </div>
+        <div id="player2Instructions" class="hidden">
+          <strong>Player 2 (Red Team):</strong> WASD: move | Q: pass/switch | E: shoot | F: steal | R: speed-up
+        </div>
+        <div id="waitingInstructions">
+          Waiting for another player to join...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const connectionScreen = document.getElementById('connectionScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const roomCodeInput = document.getElementById('roomCodeInput');
+    const createBtn = document.getElementById('createBtn');
+    const joinBtn = document.getElementById('joinBtn');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const playerScoreEl = document.getElementById('playerScore');
+    const opponentScoreEl = document.getElementById('opponentScore');
+    const gameStatusEl = document.getElementById('gameStatus');
+    const player1Instructions = document.getElementById('player1Instructions');
+    const player2Instructions = document.getElementById('player2Instructions');
+    const waitingInstructions = document.getElementById('waitingInstructions');
+
+    // WebSocket connection
+    let ws = null;
+    let playerId = null;
+    let isPlayer1 = false;
+    let isPlayer2 = false;
+    let lastStateUpdate = 0;
+
+    // Set canvas size
+    function resizeCanvas() {
+      const maxWidth = Math.min(800, window.innerWidth - 40);
+      const maxHeight = Math.min(600, window.innerHeight - 300);
+      canvas.width = maxWidth;
+      canvas.height = maxHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Game constants
+    const FIELD_WIDTH = canvas.width;
+    const FIELD_HEIGHT = canvas.height;
+    const GOAL_WIDTH = 80;
+    const GOAL_DEPTH = 20;
+    const PLAYER_RADIUS = 12;
+    const BALL_RADIUS = 8;
+    const PLAYER_SPEED = 2;
+    const FRICTION = 0.98;
+    const PASS_POWER = 4;
+    const SHOOT_POWER = 6;
+    const STEAL_RANGE = 30;
+    const SPEED_UP_MULTIPLIER = 2.0;
+    const SPEED_UP_DURATION = 45;
+    const SPEED_UP_AVAILABILITY_CHANCE = 0.001;
+
+    // Game state (synced from server)
+    let gameState = {
+      player1Score: 0,
+      player2Score: 0,
+      ball: { x: FIELD_WIDTH / 2, y: FIELD_HEIGHT / 2, vx: 0, vy: 0 },
+      player1Team: [],
+      player2Team: [],
+      player1Controlled: null,
+      player2Controlled: null,
+      gameStarted: false
+    };
+
+    // Local input state
+    let localKeys = {};
+
+    // WebSocket server URL (adjust if needed)
+    // Check if running from file:// protocol (local file) - WebSockets won't work
+    const isFileProtocol = window.location.protocol === 'file:';
+    const WS_PORT = 3001; // Changed from 8080 to avoid conflicts
+    
+    // Allow manual IP override via URL parameter: ?ip=192.168.1.100
+    const urlParams = new URLSearchParams(window.location.search);
+    const manualIP = urlParams.get('ip');
+    
+    const WS_URL = (() => {
+      if (manualIP) {
+        // Manual IP override from URL parameter
+        return `ws://${manualIP}:${WS_PORT}`;
+      } else if (isFileProtocol) {
+        // Default to localhost for file://
+        return `ws://localhost:${WS_PORT}`;
+      } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // Local development
+        return `ws://localhost:${WS_PORT}`;
+      } else {
+        // Use the same hostname as the page (for same-server deployment)
+        return `ws://${window.location.hostname}:${WS_PORT}`;
+      }
+    })();
+
+    // Connect to WebSocket
+    function connectWebSocket(roomCode, isCreating) {
+      // Warn if using file:// protocol
+      if (isFileProtocol) {
+        connectionStatus.textContent = '⚠️ Warning: Open this page via http://localhost (not file://). WebSockets require a web server.';
+        console.warn('WebSocket may not work with file:// protocol. Use a local web server.');
+      }
+      
+      if (!roomCode || roomCode.length === 0) {
+        connectionStatus.textContent = 'Please enter or generate a room code';
+        return;
+      }
+      
+      // Normalize room code: lowercase, trim, validate format (word-word)
+      roomCode = roomCode.toLowerCase().trim();
+      const roomCodePattern = /^[a-z]+-[a-z]+$/;
+      if (!roomCodePattern.test(roomCode)) {
+        connectionStatus.textContent = 'Room code must be two words separated by a hyphen (e.g., happy-cat)';
+        return;
+      }
+      
+      try {
+        connectionStatus.textContent = 'Connecting to server...';
+        console.log('Connecting to:', WS_URL);
+        ws = new WebSocket(WS_URL);
+        
+        ws.onopen = () => {
+          console.log('WebSocket connected!');
+          connectionStatus.textContent = 'Connected! ' + (isCreating ? 'Waiting for player 2...' : 'Joining room...');
+          ws.send(JSON.stringify({
+            type: isCreating ? 'create' : 'join',
+            roomCode: roomCode
+          }));
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            console.log('Received message:', message);
+            handleServerMessage(message);
+          } catch (error) {
+            console.error('Error parsing message:', error, event.data);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          connectionStatus.textContent = `Connection error. Make sure the server is running on port ${WS_PORT}! Check browser console for details.`;
+        };
+
+        ws.onclose = (event) => {
+          console.log('WebSocket closed:', event.code, event.reason);
+          if (event.code !== 1000) { // Not a normal closure
+            connectionStatus.textContent = `Connection closed (code: ${event.code}). Make sure server is running. Refresh to reconnect.`;
+          } else {
+            connectionStatus.textContent = 'Connection closed. Refresh to reconnect.';
+          }
+          if (gameScreen && !gameScreen.classList.contains('hidden')) {
+            gameState.gameStarted = false;
+          }
+        };
+      } catch (error) {
+        connectionStatus.textContent = 'Failed to connect. Check server URL: ' + WS_URL;
+        console.error('Connection error:', error);
+      }
+    }
+
+    // Handle messages from server
+    function handleServerMessage(message) {
+      switch (message.type) {
+        case 'roomCreated':
+          connectionStatus.textContent = `Room created! Code: ${message.roomCode}. Share this code with Player 2.`;
+          playerId = message.playerId;
+          isPlayer1 = true;
+          break;
+        
+        case 'roomJoined':
+          connectionStatus.textContent = 'Joined room! Waiting for game to start...';
+          playerId = message.playerId;
+          isPlayer2 = true;
+          break;
+        
+        case 'gameStart':
+          connectionScreen.classList.add('hidden');
+          gameScreen.classList.remove('hidden');
+          waitingInstructions.classList.add('hidden');
+          if (isPlayer1) {
+            player1Instructions.classList.remove('hidden');
+            gameStatusEl.textContent = 'You are Player 1 (Blue) - Arrow keys to move';
+          } else {
+            player2Instructions.classList.remove('hidden');
+            gameStatusEl.textContent = 'You are Player 2 (Red) - WASD to move';
+          }
+          gameState.gameStarted = true;
+          initGame();
+          break;
+        
+        case 'gameState':
+          // Update game state from server
+          gameState = message.state;
+          playerScoreEl.textContent = gameState.player1Score;
+          opponentScoreEl.textContent = gameState.player2Score;
+          lastStateUpdate = Date.now();
+          break;
+        
+        case 'error':
+          connectionStatus.textContent = 'Error: ' + message.message;
+          break;
+      }
+    }
+
+    // Send input to server
+    function sendInput(inputType, data = {}) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'input',
+          playerId: playerId,
+          inputType: inputType,
+          ...data
+        }));
+      }
+    }
+
+    // Initialize game
+    function initGame() {
+      resizeCanvas();
+      // Game will be rendered from server state
+    }
+
+    // Render game
+    function render() {
+      if (!gameState.gameStarted) return;
+
+      // Clear canvas
+      ctx.fillStyle = '#0f5132';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw field lines
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      
+      // Center line
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+
+      // Center circle
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, 50, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Goals
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.4)'; // Blue (Player 1 defends)
+      ctx.fillRect(0, (canvas.height - GOAL_WIDTH) / 2, GOAL_DEPTH, GOAL_WIDTH);
+      
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; // Red (Player 2 defends)
+      ctx.fillRect(canvas.width - GOAL_DEPTH, (canvas.height - GOAL_WIDTH) / 2, GOAL_DEPTH, GOAL_WIDTH);
+
+      // Goal posts
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, (canvas.height - GOAL_WIDTH) / 2);
+      ctx.lineTo(0, (canvas.height + GOAL_WIDTH) / 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(canvas.width, (canvas.height - GOAL_WIDTH) / 2);
+      ctx.lineTo(canvas.width, (canvas.height + GOAL_WIDTH) / 2);
+      ctx.stroke();
+
+      // Draw Player 1 team (blue)
+      if (gameState.player1Team) {
+        gameState.player1Team.forEach(player => {
+          const isControlled = player === gameState.player1Controlled;
+          ctx.fillStyle = isControlled ? '#3b82f6' : '#60a5fa';
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2);
+          ctx.fill();
+          
+          if (player.speedUpAvailable && !player.speedUpActive) {
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          
+          if (player.speedUpActive) {
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          
+          if (isControlled) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, PLAYER_RADIUS + 3, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        });
+      }
+
+      // Draw Player 2 team (red)
+      if (gameState.player2Team) {
+        gameState.player2Team.forEach(player => {
+          const isControlled = player === gameState.player2Controlled;
+          ctx.fillStyle = isControlled ? '#ef4444' : '#f87171';
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2);
+          ctx.fill();
+          
+          if (player.speedUpAvailable && !player.speedUpActive) {
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          
+          if (player.speedUpActive) {
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, PLAYER_RADIUS + 4, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          
+          if (isControlled) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, PLAYER_RADIUS + 3, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        });
+      }
+
+      // Draw ball
+      if (gameState.ball) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(gameState.ball.x, gameState.ball.y, BALL_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(gameState.ball.x, gameState.ball.y, BALL_RADIUS, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(gameState.ball.x - BALL_RADIUS, gameState.ball.y);
+        ctx.lineTo(gameState.ball.x + BALL_RADIUS, gameState.ball.y);
+        ctx.moveTo(gameState.ball.x, gameState.ball.y - BALL_RADIUS);
+        ctx.lineTo(gameState.ball.x, gameState.ball.y + BALL_RADIUS);
+        ctx.stroke();
+      }
+    }
+
+    // Event listeners
+    createBtn.addEventListener('click', () => {
+      let roomCode = roomCodeInput.value.trim().toLowerCase();
+      if (!roomCode) {
+        roomCode = generateRoomCode();
+        roomCodeInput.value = roomCode;
+      }
+      connectWebSocket(roomCode, true);
+    });
+
+    joinBtn.addEventListener('click', () => {
+      const roomCode = roomCodeInput.value.trim().toLowerCase();
+      if (!roomCode) {
+        connectionStatus.textContent = 'Please enter a room code (two words, like "happy-cat")';
+        return;
+      }
+      connectWebSocket(roomCode, false);
+    });
+
+    roomCodeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        if (roomCodeInput.value.trim().length > 0) {
+          joinBtn.click();
+        } else {
+          createBtn.click();
+        }
+      }
+    });
+    
+    // Auto-generate room code on page load for create button
+    window.addEventListener('load', () => {
+      const autoCode = generateRoomCode();
+      // Don't auto-fill, but show it as placeholder hint
+      roomCodeInput.placeholder = `Room Code (e.g., ${autoCode})`;
+    });
+
+    // Generate random room code using two kid-friendly words
+    function generateRoomCode() {
+      const words = [
+        'happy', 'sunny', 'funny', 'cool', 'super', 'magic', 'happy', 'sunny',
+        'cat', 'dog', 'bird', 'fish', 'star', 'moon', 'sun', 'tree',
+        'blue', 'red', 'green', 'pink', 'yellow', 'orange', 'purple', 'brown',
+        'ball', 'game', 'play', 'fun', 'joy', 'smile', 'laugh', 'dance',
+        'apple', 'banana', 'cherry', 'grape', 'lemon', 'mango', 'peach', 'berry',
+        'car', 'bus', 'train', 'plane', 'boat', 'bike', 'truck', 'van',
+        'book', 'pen', 'pencil', 'paper', 'crayon', 'marker', 'brush', 'paint',
+        'house', 'door', 'window', 'roof', 'wall', 'floor', 'room', 'bed',
+        'hat', 'shoe', 'sock', 'shirt', 'pants', 'dress', 'coat', 'jacket',
+        'cake', 'cookie', 'candy', 'ice', 'cream', 'pie', 'bread', 'milk',
+        'lion', 'tiger', 'bear', 'elephant', 'monkey', 'zebra', 'giraffe', 'panda',
+        'rock', 'water', 'fire', 'wind', 'cloud', 'rain', 'snow', 'ice',
+        'king', 'queen', 'prince', 'princess', 'knight', 'castle', 'crown', 'sword'
+      ];
+      
+      // Pick two random words
+      const word1 = words[Math.floor(Math.random() * words.length)];
+      const word2 = words[Math.floor(Math.random() * words.length)];
+      
+      // Combine with hyphen (e.g., "happy-cat")
+      return `${word1}-${word2}`;
+    }
+
+    // Keyboard input handling
+    document.addEventListener('keydown', (e) => {
+      if (!gameState.gameStarted) return;
+      
+      const key = e.key.toLowerCase();
+      let inputType = null;
+      let data = {};
+
+      if (isPlayer1) {
+        // Player 1 controls (Arrow keys)
+        if (e.key.startsWith('Arrow')) {
+          localKeys[e.key] = true;
+          const dir = {
+            'ArrowLeft': { x: -1, y: 0 },
+            'ArrowRight': { x: 1, y: 0 },
+            'ArrowUp': { x: 0, y: -1 },
+            'ArrowDown': { x: 0, y: 1 }
+          }[e.key];
+          if (dir) {
+            sendInput('move', dir);
+          }
+        } else if (key === 'a') {
+          e.preventDefault();
+          sendInput('action', { action: 'pass' });
+        } else if (key === 's') {
+          e.preventDefault();
+          sendInput('action', { action: 'shoot' });
+        } else if (key === 'd') {
+          e.preventDefault();
+          sendInput('action', { action: 'steal' });
+        } else if (key === 'w') {
+          e.preventDefault();
+          sendInput('action', { action: 'speedup' });
+        }
+      } else if (isPlayer2) {
+        // Player 2 controls (WASD)
+        if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
+          localKeys[key] = true;
+          const dir = {
+            'a': { x: -1, y: 0 },
+            'd': { x: 1, y: 0 },
+            'w': { x: 0, y: -1 },
+            's': { x: 0, y: 1 }
+          }[key];
+          if (dir) {
+            sendInput('move', dir);
+          }
+        } else if (key === 'q') {
+          e.preventDefault();
+          sendInput('action', { action: 'pass' });
+        } else if (key === 'e') {
+          e.preventDefault();
+          sendInput('action', { action: 'shoot' });
+        } else if (key === 'f') {
+          e.preventDefault();
+          sendInput('action', { action: 'steal' });
+        } else if (key === 'r') {
+          e.preventDefault();
+          sendInput('action', { action: 'speedup' });
+        }
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (!gameState.gameStarted) return;
+      
+      const key = e.key.toLowerCase();
+      if (isPlayer1 && e.key.startsWith('Arrow')) {
+        localKeys[e.key] = false;
+        sendInput('stopMove');
+      } else if (isPlayer2 && (key === 'w' || key === 'a' || key === 's' || key === 'd')) {
+        localKeys[key] = false;
+        sendInput('stopMove');
+      }
+    });
+
+    // Game loop
+    function gameLoop() {
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
+
