@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Godzilla Battle - Free Kids Game No Ads | Monster Battle Game</title>
+<meta name="description" content="Play Godzilla Battle - a free kids game with no ads! Control the grey Godzilla and battle the green Godzilla with atomic blasts. Defeat enemies to advance to the snake level!" />
+<meta name="keywords" content="godzilla, monster battle, kids games, free games, games without ads, battle game, action game, no ads games, safe games for kids" />
+<meta name="author" content="Games Collection" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="https://games.example.com/godzilla.html" />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://games.example.com/godzilla.html" />
+<meta property="og:title" content="Godzilla Battle - Free Kids Game No Ads" />
+<meta property="og:description" content="Play Godzilla Battle - a free kids game with no ads! Control the grey Godzilla and battle with atomic blasts." />
+<meta property="og:site_name" content="Games Collection" />
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary" />
+<meta property="twitter:url" content="https://games.example.com/godzilla.html" />
+<meta property="twitter:title" content="Godzilla Battle - Free Kids Game No Ads" />
+<meta property="twitter:description" content="Play Godzilla Battle - a free kids game with no ads! Control the grey Godzilla and battle with atomic blasts." />
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Godzilla Battle",
+  "description": "A free online battle game for kids with no ads. Control the grey Godzilla and battle the green Godzilla with atomic blasts. Defeat enemies to advance levels.",
+  "applicationCategory": "Game",
+  "operatingSystem": "Web Browser",
+  "gameGenre": "Action",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "audience": {
+    "@type": "Audience",
+    "audienceType": "Children"
+  },
+  "gameItem": {
+    "@type": "Thing",
+    "name": "Godzilla Battle",
+    "description": "Monster battle game with atomic blasts"
+  }
+}
+</script>
+<script src="config.js"></script>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: white;
+  }
+
+  .container {
+    background: #0f172a;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-width: 95vw;
+    width: 100%;
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .game-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: #1e293b;
+    border-radius: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .health-display {
+    display: flex;
+    gap: clamp(15px, 3vw, 30px);
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .health-bar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .health-label {
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: bold;
+  }
+
+  .health-label.player {
+    color: #94a3b8;
+  }
+
+  .health-label.enemy {
+    color: #10b981;
+  }
+
+  .health-bar {
+    width: 150px;
+    height: 20px;
+    background: #334155;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid #475569;
+  }
+
+  .health-fill {
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+  }
+
+  .health-fill.player {
+    background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%);
+  }
+
+  .health-fill.enemy {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  }
+
+  .level-display {
+    font-size: clamp(1rem, 2.5vw, 1.3rem);
+    font-weight: bold;
+    color: #fbbf24;
+    padding: 8px 16px;
+    background: #1e293b;
+    border-radius: 8px;
+    border: 2px solid #fbbf24;
+  }
+
+  .status {
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: #334155;
+  }
+
+  .status.won {
+    background: #10b981;
+    color: white;
+  }
+
+  .status.lost {
+    background: #ef4444;
+    color: white;
+  }
+
+  #gameCanvas {
+    display: block;
+    margin: 0 auto;
+    border: 3px solid #334155;
+    border-radius: 10px;
+    background: #0a0e1a;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    max-width: 100%;
+    height: auto;
+    width: 100%;
+  }
+
+  .canvas-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+  }
+
+  .controls {
+    margin-top: 20px;
+    text-align: center;
+    padding: 15px;
+    background: #1e293b;
+    border-radius: 10px;
+  }
+
+  .controls p {
+    margin-bottom: 10px;
+    color: #cbd5e1;
+    font-size: clamp(0.85rem, 2vw, 1rem);
+  }
+
+  .controls kbd {
+    background: #334155;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin: 0 2px;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: clamp(8px, 1.5vw, 10px) clamp(16px, 3vw, 20px);
+    font-size: clamp(0.85rem, 2vw, 0.95rem);
+    background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+  }
+
+  button:active {
+    transform: translateY(0);
+  }
+
+  .instructions {
+    margin-top: 15px;
+    padding: 15px;
+    background: #1e293b;
+    border-radius: 10px;
+    border-left: 4px solid #ef4444;
+  }
+
+  .instructions h3 {
+    margin-bottom: 10px;
+    color: #ef4444;
+    font-size: clamp(1rem, 2.5vw, 1.2rem);
+  }
+
+  .instructions ul {
+    list-style-position: inside;
+    color: #cbd5e1;
+    line-height: 1.8;
+    font-size: clamp(0.85rem, 2vw, 1rem);
+  }
+
+  .instructions li {
+    margin-bottom: 5px;
+  }
+
+  @media (max-width: 768px) {
+    .container {
+      padding: 15px;
+      max-width: 100vw;
+    }
+
+    .game-info {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .health-display {
+      justify-content: space-around;
+    }
+  }
+
+  @media (max-height: 700px) {
+    .instructions {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div style="margin-bottom: 15px; text-align: left;">
+      <a href="index.html" style="display: inline-block; padding: 8px 16px; background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%); color: white; text-decoration: none; border-radius: 8px; font-size: 0.9rem; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 5px 15px rgba(239, 68, 68, 0.4)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">← Back to Home</a>
+    </div>
+    <h1>🦖 Godzilla Battle</h1>
+    
+    <div class="game-info">
+      <div class="health-display">
+        <div class="health-bar-container">
+          <div class="health-label player">Player (Grey)</div>
+          <div class="health-bar">
+            <div class="health-fill player" id="playerHealth" style="width: 100%;"></div>
+          </div>
+        </div>
+        <div class="health-bar-container">
+          <div class="health-label enemy" id="enemyLabel">Enemy (Green)</div>
+          <div class="health-bar">
+            <div class="health-fill enemy" id="enemyHealth" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="level-display" id="levelDisplay">Level 1</div>
+      <div class="status" id="status">Use WASD to move, SPACE to shoot</div>
+      <button id="restartBtn">Restart Game</button>
+    </div>
+
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+      <p>Use <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or <kbd>↑</kbd> <kbd>←</kbd> <kbd>↓</kbd> <kbd>→</kbd> to move</p>
+      <p>Press <kbd>SPACE</kbd> to shoot atomic blasts from eyes and mouth</p>
+    </div>
+
+    <div class="instructions">
+      <h3>How to Play</h3>
+      <ul>
+        <li><strong>Goal:</strong> Defeat the green Godzilla by hitting it 10 times</li>
+        <li><strong>Movement:</strong> Use WASD or arrow keys to move your grey Godzilla</li>
+        <li><strong>Attack:</strong> Press SPACE to shoot atomic blasts from your eyes and mouth</li>
+        <li><strong>Defense:</strong> Avoid the enemy's atomic blasts - you can only take 10 hits!</li>
+        <li><strong>Level 2:</strong> After defeating the green Godzilla, battle the snake!</li>
+        <li><strong>Win:</strong> Defeat all enemies to win the game</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const playerHealthElement = document.getElementById('playerHealth');
+    const enemyHealthElement = document.getElementById('enemyHealth');
+    const enemyLabelElement = document.getElementById('enemyLabel');
+    const levelDisplayElement = document.getElementById('levelDisplay');
+    const statusElement = document.getElementById('status');
+    const restartBtn = document.getElementById('restartBtn');
+
+    // Game state
+    let gameState = 'playing'; // 'playing', 'won', 'lost', 'levelComplete'
+    let level = 1;
+    let keys = {};
+    let playerHits = 0;
+    let enemyHits = 0;
+    const MAX_HITS = 10;
+
+    // Base game dimensions
+    const BASE_WIDTH = 1000;
+    const BASE_HEIGHT = 600;
+    let canvasWidth = BASE_WIDTH;
+    let canvasHeight = BASE_HEIGHT;
+    let scale = 1;
+
+    // Game objects
+    let player = {
+      x: 100,
+      y: 300,
+      width: 80,
+      height: 100,
+      speed: 3,
+      color: '#94a3b8', // Grey
+      facing: 1 // 1 = right, -1 = left
+    };
+
+    let enemy = {
+      x: 800,
+      y: 300,
+      width: 80,
+      height: 100,
+      speed: 2,
+      color: '#10b981', // Green
+      facing: -1,
+      lastShot: 0,
+      shotInterval: 2000 // Shoot every 2 seconds
+    };
+
+    let snake = null; // Will be created in level 2
+
+    let playerBlasts = [];
+    let enemyBlasts = [];
+    let snakeBlasts = [];
+
+    // Cache container reference
+    const container = document.querySelector('.container');
+
+    // Function to resize canvas
+    function resizeCanvas() {
+      const containerRect = container.getBoundingClientRect();
+      const availableWidth = containerRect.width - 40;
+      const availableHeight = window.innerHeight - 300;
+      
+      const MAX_WIDTH = 1000;
+      const MAX_HEIGHT = 600;
+      const aspectRatio = BASE_WIDTH / BASE_HEIGHT;
+      let newWidth = Math.min(availableWidth, MAX_WIDTH);
+      let newHeight = newWidth / aspectRatio;
+      
+      if (newHeight > availableHeight || newHeight > MAX_HEIGHT) {
+        newHeight = Math.min(availableHeight, MAX_HEIGHT);
+        newWidth = newHeight * aspectRatio;
+      }
+      
+      canvasWidth = Math.floor(newWidth);
+      canvasHeight = Math.floor(newHeight);
+      scale = canvasWidth / BASE_WIDTH;
+      
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      canvas.style.width = canvasWidth + 'px';
+      canvas.style.height = canvasHeight + 'px';
+      
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      
+      // Scale game objects
+      player.width = 80 * scale;
+      player.height = 100 * scale;
+      player.speed = 3 * scale;
+      if (enemy) {
+        enemy.width = 80 * scale;
+        enemy.height = 100 * scale;
+        enemy.speed = 2 * scale;
+      }
+      if (snake) {
+        snake.width = 120 * scale;
+        snake.height = 40 * scale;
+        snake.speed = 2.5 * scale;
+      }
+    }
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'W', 'a', 'A', 's', 'S', 'd', 'D', ' '].includes(e.key)) {
+        e.preventDefault();
+      }
+      keys[e.key] = true;
+      
+      if (e.key === ' ' && gameState === 'playing') {
+        shootPlayerBlast();
+      }
+      
+      if (e.key === ' ' && (gameState === 'won' || gameState === 'lost')) {
+        restartGame();
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    function shootPlayerBlast() {
+      const now = Date.now();
+      if (playerBlasts.length > 0 && playerBlasts[playerBlasts.length - 1].created > now - 300) {
+        return; // Limit shooting rate
+      }
+
+      // Shoot from eyes (2 blasts)
+      playerBlasts.push({
+        x: player.x + (player.facing === 1 ? player.width : 0),
+        y: player.y + 20 * scale,
+        vx: player.facing * 5 * scale,
+        vy: 0,
+        radius: 8 * scale,
+        color: '#fbbf24',
+        created: now
+      });
+      playerBlasts.push({
+        x: player.x + (player.facing === 1 ? player.width : 0),
+        y: player.y + 30 * scale,
+        vx: player.facing * 5 * scale,
+        vy: 0,
+        radius: 8 * scale,
+        color: '#fbbf24',
+        created: now
+      });
+
+      // Shoot from mouth (1 blast)
+      playerBlasts.push({
+        x: player.x + (player.facing === 1 ? player.width : 0),
+        y: player.y + 60 * scale,
+        vx: player.facing * 5 * scale,
+        vy: 0,
+        radius: 10 * scale,
+        color: '#f59e0b',
+        created: now
+      });
+    }
+
+    function shootEnemyBlast() {
+      const now = Date.now();
+      if (now - enemy.lastShot < enemy.shotInterval) {
+        return;
+      }
+      enemy.lastShot = now;
+
+      // Shoot from eyes (2 blasts)
+      enemyBlasts.push({
+        x: enemy.x + (enemy.facing === 1 ? enemy.width : 0),
+        y: enemy.y + 20 * scale,
+        vx: enemy.facing * 5 * scale,
+        vy: 0,
+        radius: 8 * scale,
+        color: '#10b981',
+        created: now
+      });
+      enemyBlasts.push({
+        x: enemy.x + (enemy.facing === 1 ? enemy.width : 0),
+        y: enemy.y + 30 * scale,
+        vx: enemy.facing * 5 * scale,
+        vy: 0,
+        radius: 8 * scale,
+        color: '#10b981',
+        created: now
+      });
+
+      // Shoot from mouth (1 blast)
+      enemyBlasts.push({
+        x: enemy.x + (enemy.facing === 1 ? enemy.width : 0),
+        y: enemy.y + 60 * scale,
+        vx: enemy.facing * 5 * scale,
+        vy: 0,
+        radius: 10 * scale,
+        color: '#059669',
+        created: now
+      });
+    }
+
+    function shootSnakeBlast() {
+      const now = Date.now();
+      if (snakeBlasts.length > 0 && snakeBlasts[snakeBlasts.length - 1].created > now - 1500) {
+        return;
+      }
+
+      // Snake shoots from head
+      snakeBlasts.push({
+        x: snake.x + snake.width / 2,
+        y: snake.y,
+        vx: 0,
+        vy: 4 * scale,
+        radius: 8 * scale,
+        color: '#ef4444',
+        created: now
+      });
+    }
+
+    function updatePlayer() {
+      if (gameState !== 'playing') return;
+
+      let moved = false;
+      if (keys['w'] || keys['W'] || keys['ArrowUp']) {
+        player.y = Math.max(0, player.y - player.speed);
+        moved = true;
+      }
+      if (keys['s'] || keys['S'] || keys['ArrowDown']) {
+        player.y = Math.min(canvasHeight - player.height, player.y + player.speed);
+        moved = true;
+      }
+      if (keys['a'] || keys['A'] || keys['ArrowLeft']) {
+        player.x = Math.max(0, player.x - player.speed);
+        player.facing = -1;
+        moved = true;
+      }
+      if (keys['d'] || keys['D'] || keys['ArrowRight']) {
+        player.x = Math.min(canvasWidth - player.width, player.x + player.speed);
+        player.facing = 1;
+        moved = true;
+      }
+    }
+
+    function updateEnemy() {
+      if (gameState !== 'playing' || !enemy) return;
+
+      // Move towards player
+      const dx = player.x - enemy.x;
+      const dy = player.y - enemy.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance > 200 * scale) {
+        // Move towards player
+        enemy.x += (dx / distance) * enemy.speed;
+        enemy.y += (dy / distance) * enemy.speed;
+        enemy.facing = dx > 0 ? 1 : -1;
+      } else {
+        // Keep some distance
+        enemy.x -= (dx / distance) * enemy.speed * 0.5;
+        enemy.y -= (dy / distance) * enemy.speed * 0.5;
+        enemy.facing = dx > 0 ? -1 : 1;
+      }
+
+      // Keep enemy in bounds
+      enemy.x = Math.max(0, Math.min(canvasWidth - enemy.width, enemy.x));
+      enemy.y = Math.max(0, Math.min(canvasHeight - enemy.height, enemy.y));
+
+      // Shoot at player
+      shootEnemyBlast();
+    }
+
+    function updateSnake() {
+      if (gameState !== 'playing' || !snake) return;
+
+      // Move snake in a pattern
+      snake.x += snake.vx;
+      snake.y += snake.vy;
+
+      // Bounce off walls
+      if (snake.x <= 0 || snake.x + snake.width >= canvasWidth) {
+        snake.vx = -snake.vx;
+      }
+      if (snake.y <= 0 || snake.y + snake.height >= canvasHeight) {
+        snake.vy = -snake.vy;
+      }
+
+      // Keep in bounds
+      snake.x = Math.max(0, Math.min(canvasWidth - snake.width, snake.x));
+      snake.y = Math.max(0, Math.min(canvasHeight - snake.height, snake.y));
+
+      // Shoot at player
+      shootSnakeBlast();
+    }
+
+    function updateBlasts() {
+      // Update player blasts
+      for (let i = playerBlasts.length - 1; i >= 0; i--) {
+        const blast = playerBlasts[i];
+        blast.x += blast.vx;
+        blast.y += blast.vy;
+
+        // Remove if out of bounds
+        if (blast.x < -blast.radius || blast.x > canvasWidth + blast.radius ||
+            blast.y < -blast.radius || blast.y > canvasHeight + blast.radius) {
+          playerBlasts.splice(i, 1);
+          continue;
+        }
+
+        // Check collision with enemy
+        if (enemy) {
+          if (blast.x > enemy.x && blast.x < enemy.x + enemy.width &&
+              blast.y > enemy.y && blast.y < enemy.y + enemy.height) {
+            playerBlasts.splice(i, 1);
+            enemyHits++;
+            updateHealth();
+            if (enemyHits >= MAX_HITS) {
+              enemy = null;
+              if (level === 1) {
+                level = 2;
+                startLevel2();
+              } else {
+                gameState = 'won';
+                statusElement.textContent = 'You Won!';
+                statusElement.className = 'status won';
+              }
+            }
+          }
+        }
+
+        // Check collision with snake
+        if (snake) {
+          if (blast.x > snake.x && blast.x < snake.x + snake.width &&
+              blast.y > snake.y && blast.y < snake.y + snake.height) {
+            playerBlasts.splice(i, 1);
+            enemyHits++;
+            updateHealth();
+            if (enemyHits >= MAX_HITS) {
+              snake = null;
+              gameState = 'won';
+              statusElement.textContent = 'You Won!';
+              statusElement.className = 'status won';
+            }
+          }
+        }
+      }
+
+      // Update enemy blasts
+      for (let i = enemyBlasts.length - 1; i >= 0; i--) {
+        const blast = enemyBlasts[i];
+        blast.x += blast.vx;
+        blast.y += blast.vy;
+
+        // Remove if out of bounds
+        if (blast.x < -blast.radius || blast.x > canvasWidth + blast.radius ||
+            blast.y < -blast.radius || blast.y > canvasHeight + blast.radius) {
+          enemyBlasts.splice(i, 1);
+          continue;
+        }
+
+        // Check collision with player
+        if (blast.x > player.x && blast.x < player.x + player.width &&
+            blast.y > player.y && blast.y < player.y + player.height) {
+          enemyBlasts.splice(i, 1);
+          playerHits++;
+          updateHealth();
+          if (playerHits >= MAX_HITS) {
+            gameState = 'lost';
+            statusElement.textContent = 'Game Over!';
+            statusElement.className = 'status lost';
+          }
+        }
+      }
+
+      // Update snake blasts
+      for (let i = snakeBlasts.length - 1; i >= 0; i--) {
+        const blast = snakeBlasts[i];
+        blast.x += blast.vx;
+        blast.y += blast.vy;
+
+        // Remove if out of bounds
+        if (blast.x < -blast.radius || blast.x > canvasWidth + blast.radius ||
+            blast.y < -blast.radius || blast.y > canvasHeight + blast.radius) {
+          snakeBlasts.splice(i, 1);
+          continue;
+        }
+
+        // Check collision with player
+        if (blast.x > player.x && blast.x < player.x + player.width &&
+            blast.y > player.y && blast.y < player.y + player.height) {
+          snakeBlasts.splice(i, 1);
+          playerHits++;
+          updateHealth();
+          if (playerHits >= MAX_HITS) {
+            gameState = 'lost';
+            statusElement.textContent = 'Game Over!';
+            statusElement.className = 'status lost';
+          }
+        }
+      }
+    }
+
+    function updateHealth() {
+      const playerHealthPercent = Math.max(0, (MAX_HITS - playerHits) / MAX_HITS * 100);
+      const enemyHealthPercent = Math.max(0, (MAX_HITS - enemyHits) / MAX_HITS * 100);
+      playerHealthElement.style.width = playerHealthPercent + '%';
+      enemyHealthElement.style.width = enemyHealthPercent + '%';
+    }
+
+    function startLevel2() {
+      enemy = null;
+      enemyBlasts = [];
+      enemyHits = 0;
+      
+      snake = {
+        x: canvasWidth / 2 - 60 * scale,
+        y: 50 * scale,
+        width: 120 * scale,
+        height: 40 * scale,
+        speed: 2.5 * scale,
+        vx: 2.5 * scale,
+        vy: 2.5 * scale,
+        color: '#ef4444'
+      };
+      
+      levelDisplayElement.textContent = 'Level 2';
+      enemyLabelElement.textContent = 'Enemy (Snake)';
+      statusElement.textContent = 'Level 2: Battle the Snake!';
+      statusElement.className = 'status';
+    }
+
+    function restartGame() {
+      gameState = 'playing';
+      level = 1;
+      playerHits = 0;
+      enemyHits = 0;
+      
+      player.x = 100 * scale;
+      player.y = (canvasHeight - player.height) / 2;
+      
+      enemy = {
+        x: canvasWidth - 180 * scale,
+        y: (canvasHeight - 100 * scale) / 2,
+        width: 80 * scale,
+        height: 100 * scale,
+        speed: 2 * scale,
+        color: '#10b981',
+        facing: -1,
+        lastShot: 0,
+        shotInterval: 2000
+      };
+      
+      snake = null;
+      playerBlasts = [];
+      enemyBlasts = [];
+      snakeBlasts = [];
+      
+      levelDisplayElement.textContent = 'Level 1';
+      enemyLabelElement.textContent = 'Enemy (Green)';
+      statusElement.textContent = 'Use WASD to move, SPACE to shoot';
+      statusElement.className = 'status';
+      updateHealth();
+    }
+
+    function drawGodzilla(x, y, width, height, color, facing) {
+      ctx.save();
+      
+      // Flip if facing left
+      if (facing === -1) {
+        ctx.translate(x + width, y);
+        ctx.scale(-1, 1);
+        x = 0;
+        y = 0;
+      }
+
+      // Body
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y + 20 * scale, width, height - 40 * scale);
+      
+      // Head
+      ctx.fillRect(x + 10 * scale, y, width - 20 * scale, 30 * scale);
+      
+      // Spikes on back
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const spikeX = x + 15 * scale + (i * 15 * scale);
+        const spikeY = y + 25 * scale;
+        ctx.moveTo(spikeX, spikeY);
+        ctx.lineTo(spikeX + 5 * scale, spikeY - 10 * scale);
+        ctx.lineTo(spikeX + 10 * scale, spikeY);
+      }
+      ctx.fill();
+      
+      // Eyes
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(x + 20 * scale, y + 10 * scale, 5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + 30 * scale, y + 10 * scale, 5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Mouth
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(x + 25 * scale, y + 20 * scale, 10 * scale, 8 * scale);
+      
+      // Arms
+      ctx.fillStyle = color;
+      ctx.fillRect(x - 5 * scale, y + 30 * scale, 8 * scale, 20 * scale);
+      ctx.fillRect(x + width - 3 * scale, y + 30 * scale, 8 * scale, 20 * scale);
+      
+      // Legs
+      ctx.fillRect(x + 10 * scale, y + height - 20 * scale, 15 * scale, 20 * scale);
+      ctx.fillRect(x + width - 25 * scale, y + height - 20 * scale, 15 * scale, 20 * scale);
+      
+      // Tail
+      ctx.beginPath();
+      ctx.moveTo(x + width / 2, y + height - 20 * scale);
+      ctx.lineTo(x + width + 10 * scale, y + height - 10 * scale);
+      ctx.lineTo(x + width / 2, y + height);
+      ctx.fill();
+      
+      ctx.restore();
+    }
+
+    function drawSnake(x, y, width, height, color) {
+      // Body segments
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, width, height);
+      
+      // Head
+      ctx.fillRect(x + width / 2 - 15 * scale, y - 10 * scale, 30 * scale, 20 * scale);
+      
+      // Eyes
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(x + width / 2 - 5 * scale, y - 5 * scale, 4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + width / 2 + 5 * scale, y - 5 * scale, 4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Body pattern
+      ctx.strokeStyle = '#991b1b';
+      ctx.lineWidth = 2 * scale;
+      for (let i = 0; i < 3; i++) {
+        ctx.strokeRect(x + (i * 30 * scale), y, 25 * scale, height);
+      }
+    }
+
+    function draw() {
+      // Clear canvas
+      ctx.fillStyle = '#0a0e1a';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      
+      // Draw background pattern
+      ctx.fillStyle = '#1a1a2e';
+      for (let i = 0; i < canvasWidth; i += 50 * scale) {
+        for (let j = 0; j < canvasHeight; j += 50 * scale) {
+          ctx.fillRect(i, j, 1 * scale, 1 * scale);
+        }
+      }
+
+      // Draw player
+      drawGodzilla(player.x, player.y, player.width, player.height, player.color, player.facing);
+
+      // Draw enemy
+      if (enemy) {
+        drawGodzilla(enemy.x, enemy.y, enemy.width, enemy.height, enemy.color, enemy.facing);
+      }
+
+      // Draw snake
+      if (snake) {
+        drawSnake(snake.x, snake.y, snake.width, snake.height, snake.color);
+      }
+
+      // Draw blasts
+      playerBlasts.forEach(blast => {
+        ctx.fillStyle = blast.color;
+        ctx.beginPath();
+        ctx.arc(blast.x, blast.y, blast.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(blast.x, blast.y, blast.radius * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      enemyBlasts.forEach(blast => {
+        ctx.fillStyle = blast.color;
+        ctx.beginPath();
+        ctx.arc(blast.x, blast.y, blast.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(blast.x, blast.y, blast.radius * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      snakeBlasts.forEach(blast => {
+        ctx.fillStyle = blast.color;
+        ctx.beginPath();
+        ctx.arc(blast.x, blast.y, blast.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(blast.x, blast.y, blast.radius * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw game-over overlay
+      if (gameState === 'won' || gameState === 'lost') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+        const boxWidth = 400 * scale;
+        const boxHeight = 150 * scale;
+        const boxX = (canvasWidth - boxWidth) / 2;
+        const boxY = (canvasHeight - boxHeight) / 2;
+        
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+        ctx.strokeStyle = gameState === 'won' ? '#10b981' : '#ef4444';
+        ctx.lineWidth = 3 * scale;
+        
+        const cornerRadius = 15 * scale;
+        ctx.beginPath();
+        ctx.moveTo(boxX + cornerRadius, boxY);
+        ctx.lineTo(boxX + boxWidth - cornerRadius, boxY);
+        ctx.quadraticCurveTo(boxX + boxWidth, boxY, boxX + boxWidth, boxY + cornerRadius);
+        ctx.lineTo(boxX + boxWidth, boxY + boxHeight - cornerRadius);
+        ctx.quadraticCurveTo(boxX + boxWidth, boxY + boxHeight, boxX + boxWidth - cornerRadius, boxY + boxHeight);
+        ctx.lineTo(boxX + cornerRadius, boxY + boxHeight);
+        ctx.quadraticCurveTo(boxX, boxY + boxHeight, boxX, boxY + boxHeight - cornerRadius);
+        ctx.lineTo(boxX, boxY + cornerRadius);
+        ctx.quadraticCurveTo(boxX, boxY, boxX + cornerRadius, boxY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = gameState === 'won' ? '#10b981' : '#ef4444';
+        ctx.font = `bold ${36 * scale}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const mainMessage = gameState === 'won' ? 'You Won!' : 'Game Over!';
+        ctx.fillText(mainMessage, canvasWidth / 2, boxY + 50 * scale);
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = `${18 * scale}px Arial`;
+        ctx.fillText('Press SPACE to play again', canvasWidth / 2, boxY + 100 * scale);
+      }
+    }
+
+    function gameLoop() {
+      updatePlayer();
+      updateEnemy();
+      updateSnake();
+      updateBlasts();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Initialize
+    resizeCanvas();
+    restartGame();
+    
+    restartBtn.addEventListener('click', restartGame);
+
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        resizeCanvas();
+        // Reposition game objects after resize
+        if (gameState === 'playing') {
+          player.x = Math.min(player.x, canvasWidth - player.width);
+          player.y = Math.min(player.y, canvasHeight - player.height);
+          if (enemy) {
+            enemy.x = Math.min(enemy.x, canvasWidth - enemy.width);
+            enemy.y = Math.min(enemy.y, canvasHeight - enemy.height);
+          }
+          if (snake) {
+            snake.x = Math.min(snake.x, canvasWidth - snake.width);
+            snake.y = Math.min(snake.y, canvasHeight - snake.height);
+          }
+        }
+      }, 250);
+    });
+
+    // Start game loop
+    gameLoop();
+  </script>
+</body>
+</html>
+
