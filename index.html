@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Free Kids Games - No Ads | Games Collection</title>
-<meta name="description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, and Soccer Rocker. Safe, educational, and fun games for children." />
-<meta name="keywords" content="kids games, free games, games without ads, educational games, tic tac toe, tetris, pong, puzzle games, children games, safe games, no ads games" />
+<meta name="description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, Soccer Rocker, and Godzilla Battle. Safe, educational, and fun games for children." />
+<meta name="keywords" content="kids games, free games, games without ads, educational games, tic tac toe, tetris, pong, puzzle games, children games, safe games, no ads games, godzilla battle" />
 <meta name="author" content="Games Collection" />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="https://games.example.com/" />
@@ -14,14 +14,14 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://games.example.com/" />
 <meta property="og:title" content="Free Kids Games - No Ads | Games Collection" />
-<meta property="og:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, and Soccer Rocker. Safe, educational, and fun games for children." />
+<meta property="og:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, Soccer Rocker, and Godzilla Battle. Safe, educational, and fun games for children." />
 <meta property="og:site_name" content="Games Collection" />
 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:url" content="https://games.example.com/" />
 <meta property="twitter:title" content="Free Kids Games - No Ads | Games Collection" />
-<meta property="twitter:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, and Soccer Rocker. Safe, educational, and fun games for children." />
+<meta property="twitter:description" content="Free online games for kids with no ads! Play Tic Tac Toe, Tetris, Pong Escape, Tiling Puzzle, Soccer Rocker, and Godzilla Battle. Safe, educational, and fun games for children." />
 
 <script type="application/ld+json">
 {
@@ -78,6 +78,13 @@
       "name": "Soccer Rocker",
       "description": "Top-down soccer game where you control your team. Pass, dribble, and shoot to score goals",
       "url": "https://games.example.com/soccer-rocker.html"
+    },
+    {
+      "@type": "Game",
+      "position": 6,
+      "name": "Godzilla Battle",
+      "description": "Control the grey Godzilla and battle the green Godzilla with atomic blasts. Defeat enemies to advance to the snake level",
+      "url": "https://games.example.com/godzilla.html"
     }
   ]
 }
@@ -213,6 +220,14 @@
     background: linear-gradient(135deg, #059669 0%, #047857 100%);
   }
 
+  .game-card.godzilla {
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+  }
+
+  .game-card.godzilla:hover {
+    background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+  }
+
   @media (max-width: 600px) {
     h1 {
       font-size: 2rem;
@@ -272,6 +287,14 @@
         <div class="game-title">Soccer Rocker</div>
         <div class="game-description">
           Top-down soccer game! Control your team, pass to teammates, dribble past opponents, and shoot to score goals.
+        </div>
+      </a>
+      
+      <a href="godzilla.html" class="game-card godzilla">
+        <div class="game-icon">🦖</div>
+        <div class="game-title">Godzilla Battle</div>
+        <div class="game-description">
+          Control the grey Godzilla and battle the green Godzilla with atomic blasts. Defeat enemies to advance to the snake level!
         </div>
       </a>
       
